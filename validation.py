@@ -193,8 +193,9 @@ for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','
 ###################################################################
 # Load Reference Peaks
 ###################################################################
-print 'Load SNP Peaks'
-validationDataFile = pd.read_csv(wddata+'validation_K562/known_connections_full_hg38.txt', header=0, sep='\t')
+exit()
+print 'Load Reference Peaks'
+validationDataFile = pd.read_csv(wddata+'validation_K562/known_connections/known_connections_full_hg38.txt', header=0, sep='\t')
 
 peakChrV = np.array(validationDataFile['peakChr'])
 peakPosV = np.array([validationDataFile['peakStart'],validationDataFile['peakStop']])
@@ -209,59 +210,30 @@ for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','
 
 	# Sort variables by position
 	sort = np.argsort(vars()['peakPosV'+ichr][0])
-	vars()['peakPosV'+ichr] = peakPosV[:,sort]
-	vars()['peakNameV'+ichr] = peakNameV[sort]
+	vars()['peakPosV'+ichr] = vars()['peakPosV'+ichr][:,sort]
+	vars()['peakNameV'+ichr] = vars()['peakNameV'+ichr][sort]
 
-	# match validation peaks to peaks in our dataset
+	# create 1D array of each bp and what peak it matches
 	chrLen = np.amax( [np.amax(vars()['positionActivity'+ichr][1]), np.amax(vars()['peakPosV'+ichr][1])] )
-	valPos = -9999*np.ones(shape=chrLen,dtype=int)
-	for ival in range( len(vars()['peakPosV'+ichr][0]) ):
-		valPos[ vars()['peakPosV'+ichr][0,ival]:vars()['peakPosV'+ichr][1,ival]+1 ] = ival
-	exit()
+	peakPos = -9999*np.ones(shape=chrLen,dtype=int)
+	for ipeak in range( len(vars()['positionActivity'+ichr][0]) ):
+		peakPos[ vars()['positionActivity'+ichr][0,ipeak]-2000:vars()['positionActivity'+ichr][1,ipeak]+2000 ] = ipeak
 
-	vars()['validationIndex'+ichr] = np.zeros(shape=(vars()['activity'+ichr].shape))
+	vars()['validationIndex'+ichr] = np.zeros(shape=(vars()['peakPosV'+ichr].shape[1]))
 	goodVal = 0
 	noVal = 0
-	for ipeak in range( vars()['nPeaks'+ichr] ):
-		ival = np.amax( valPos[vars()['positionActivity'+ichr][0,ipeak]-2000:vars()['positionActivity'+ichr][1,ipeak]+2000] )
+	for ival in range( len(vars()['validationIndex'+ichr]) ):
+		ipeak = np.amax( peakPos[vars()['peakPosV'+ichr][0,ival]:vars()['peakPosV'+ichr][1,ival]] )
 		if ival>-1:
-			vars()['validationIndex'+ichr][ipeak] = ival
-			print ival
+			vars()['validationIndex'+ichr][ival] = ipeak
 		else:
-			vars()['validationIndex'+ichr][ipeak] = -9999
-	exit()
+			vars()['validationIndex'+ichr][ival] = -9999
 
+	print 'Chromosome', ichr+':', str(int(100*np.round( len(np.unique(vars()['validationIndex'+ichr][vars()['validationIndex'+ichr]>-1]))/float(len(np.unique(vars()['peakPosV'+ichr][0]))),2)))+'% match','out of', len(np.unique(vars()['peakPosV'+ichr][0])), 'peaks'
 
-
-
-
-
-
-	vars()['peakQTL'+ichr] = np.zeros(shape=(vars()['peakName'+ichr].shape),dtype=object)
-	vars()['peakBeta'+ichr] = np.zeros(shape=(vars()['peakName'+ichr].shape),dtype=object)
-	peakFound = np.zeros(shape = (vars()['snpID'+ichr].shape), dtype=bool)
-	for ipeak in range(len(vars()['peakName'+ichr])):
-		#### Find overlapping peaks ####
-		moreThan = vars()['positionActivity'+ichr][0,ipeak] >= vars()['qtlPos'+ichr][0,:]
-		lessThan = vars()['positionActivity'+ichr][0,ipeak] < vars()['qtlPos'+ichr][1,:]
-		moreThan1 = vars()['positionActivity'+ichr][1,ipeak] > vars()['qtlPos'+ichr][0,:]
-		lessThan1 = vars()['positionActivity'+ichr][1,ipeak] <= vars()['qtlPos'+ichr][1,:]
-		if np.amax(moreThan==lessThan) == True:
-			index = np.where(moreThan==lessThan)
-			vars()['peakQTL'+ichr][ipeak] = vars()['snpID'+ichr][index]
-			vars()['peakBeta'+ichr][ipeak] = vars()['peakBetaAll'+ichr][index]
-			peakFound[index] = True
-		elif np.amax(moreThan1==lessThan1) == True:
-			index = np.where(moreThan1==lessThan1)
-			vars()['peakQTL'+ichr][ipeak] = vars()['snpID'+ichr][index]
-			vars()['peakBeta'+ichr][ipeak] = vars()['peakBetaAll'+ichr][index]
-			peakFound[index] = True
-	print ichr, np.round(np.sum(np.invert(peakFound))/float(len(peakFound)),2)
-
-###################################################################
+####################################################################
 # Load Reference Genes
-###################################################################
-
+####################################################################
 
 geneNameV = np.array(validationDataFile['geneName'])
 geneIDV = np.array(validationDataFile['geneID'])
@@ -272,64 +244,33 @@ beta = np.array(validationDataFile['beta'])
 intercept = np.array(validationDataFile['intercept'])
 fold_change = np.array(validationDataFile['fold_change'])
 
-vars()['geneNameV'+ichr] = geneNameV[chrMask]
-vars()['directionV'+ichr] = directionV[chrMask]
-vars()['pValue'+ichr] = pValue[chrMask]
-vars()['beta'+ichr] = beta[chrMask]
-vars()['intercept'+ichr] = intercept[chrMask]
-vars()['fold_change'+ichr] = fold_change[chrMask]
-
-vars()['geneNameV'+ichr] = geneNameV[sort]
-vars()['directionV'+ichr] = directionV[sort]
-vars()['pValue'+ichr] = pValue[sort]
-vars()['beta'+ichr] = beta[sort]
-vars()['intercept'+ichr] = intercept[sort]
-vars()['fold_change'+ichr] = fold_change[sort]
-
-
-print 'Load SNP Genes'
-genesRefFile = pd.read_csv(wddata+'validation_K562/eQTL_genes.csv', header=0, sep=',')
-snps = np.array(genesRefFile['SNP'][pd.isnull(genesRefFile['SNP'])==False])
-geneNames = np.array(genesRefFile['gene'][pd.isnull(genesRefFile['gene'])==False])
-geneBetaAll = np.array(genesRefFile['beta'][pd.isnull(genesRefFile['gene'])==False])
-
-snpChr_g = np.zeros(shape=(snps.shape),dtype=int)
-snpID_g = np.zeros(shape=(snps.shape),dtype=object)
-for line in range(len(snps)):
-	snpChr_g[line] = int(snps[line].split(':')[0][3:])
-	snpID_g[line] = snps[line].split('_')[1]
-
-jchr = 0
 for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22']:
-	jchr+=1
+	 # Limit to only the current chromosome
+	 chrMask = peakChrV=='chr'+ichr
+	 vars()['geneNameV'+ichr] = geneNameV[chrMask]
+	 vars()['directionV'+ichr] = directionV[chrMask]
+	 vars()['pValue'+ichr] = pValue[chrMask]
+	 vars()['beta'+ichr] = beta[chrMask]
+	 vars()['intercept'+ichr] = intercept[chrMask]
+	 vars()['fold_change'+ichr] = fold_change[chrMask]
 
-	chrMask = snpChr_g==jchr
-	vars()['snpID'+ichr] = snpID_g[chrMask]
-	vars()['geneBetaAll'+ichr] = geneBetaAll[chrMask]
-	chrMask = np.invert(chrMask)
-	vars()['geneNameRef'+ichr] = np.ma.compressed(np.ma.masked_array(geneNames,chrMask))
+	 # Sort variables by position
+	 sort = np.argsort(vars()['peakPosV'+ichr][0])
+	 vars()['geneNameV'+ichr] = vars()['geneNameV'+ichr][sort]
+	 vars()['directionV'+ichr] = vars()['directionV'+ichr][sort]
+	 vars()['pValue'+ichr] = vars()['pValue'+ichr][sort]
+	 vars()['beta'+ichr] = vars()['beta'+ichr][sort]
+	 vars()['intercept'+ichr] = vars()['intercept'+ichr][sort]
+	 vars()['fold_change'+ichr] = vars()['fold_change'+ichr][sort]
 
-	# geneQTL = array of genes to which QTL they correpond to 
-	#vars()['geneQTL'+ichr] = np.zeros(shape=(vars()['geneMatrix'+ichr].shape),dtype=object)
-	#vars()['geneBeta'+ichr] = np.zeros(shape=(vars()['geneMatrix'+ichr].shape),dtype=object)
-	vars()['geneQTL'+ichr] = np.zeros(shape=(vars()['geneName'+ichr].shape),dtype=object)
-	vars()['geneBeta'+ichr] = np.zeros(shape=(vars()['geneName'+ichr].shape),dtype=object)
-	#geneFound = np.zeros(shape = (vars()['snpID'+ichr].shape), dtype=bool)
-	geneFound= np.zeros(shape = (vars()['snpID'+ichr].shape), dtype=bool)
-	for igene in range(len(vars()['geneNameRef'+ichr])):
-		#### Find overlapping peaks ####
-		#if np.amax(vars()['geneMatrix'+ichr] == vars()['geneNameRef'+ichr][igene])==True:
-		#	index = np.where( vars()['geneMatrix'+ichr] == vars()['geneNameRef'+ichr][igene])[0][0]
-		#	vars()['geneQTL'+ichr][index] = vars()['snpID'+ichr][igene]
-		#	vars()['geneBeta'+ichr][index] = vars()['geneBetaAll'+ichr][igene]
-		#	geneFound[igene] = True
-		if np.amax(vars()['geneName'+ichr] == vars()['geneNameRef'+ichr][igene])==True:
-			index = np.where( vars()['geneName'+ichr] == vars()['geneNameRef'+ichr][igene])[0][0]
-			vars()['geneQTL'+ichr][index] = vars()['snpID'+ichr][igene]
-			vars()['geneBeta'+ichr][index] = vars()['geneBetaAll'+ichr][igene]
-			geneFound[igene] = True
+	 # geneIndex = array of reference genes to which rna gene they correpond to
+	 vars()['geneIndex'+ichr] = -9999*np.ones(shape=(vars()['geneNameV'+ichr].shape),dtype =object)
+	 for igene in range(len(vars()['geneNameV'+ichr])):
+		 if np.amax(vars()['geneName'+ichr] == vars()['geneNameV'+ichr][igene])==True:
+			 index = np.where( vars()['geneName'+ichr] == vars()['geneNameV'+ichr][igene])[0][0]
+			 vars()['geneIndex'+ichr][igene] = index
 
-	print np.sum(np.invert(geneFound))
+	 print 'Chromosome', ichr+':', str(int(100*np.round( len(np.unique(vars()['geneIndex'+ ichr][vars()['geneIndex'+ichr]>-1]))/float(len(np.unique(vars()['geneNameV'+ichr]))),2))) +'% match','out of', len(np.unique(vars()['geneNameV'+ichr])), 'genes'
 
 ###################################################################
 # Connect Peaks to Genes
