@@ -193,8 +193,7 @@ for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','
 ###################################################################
 # Load Reference Peaks
 ###################################################################
-exit()
-print 'Load Reference Peaks'
+print '\nLoad Reference Peaks'
 validationDataFile = pd.read_csv(wddata+'validation_K562/known_connections/known_connections_full_hg38.txt', header=0, sep='\t')
 
 peakChrV = np.array(validationDataFile['peakChr'])
@@ -219,21 +218,22 @@ for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','
 	for ipeak in range( len(vars()['positionActivity'+ichr][0]) ):
 		peakPos[ vars()['positionActivity'+ichr][0,ipeak]-2000:vars()['positionActivity'+ichr][1,ipeak]+2000 ] = ipeak
 
-	vars()['validationIndex'+ichr] = np.zeros(shape=(vars()['peakPosV'+ichr].shape[1]))
+	vars()['peakIndex'+ichr] = np.zeros(shape=(vars()['peakPosV'+ichr].shape[1]),dtype=int)
 	goodVal = 0
 	noVal = 0
-	for ival in range( len(vars()['validationIndex'+ichr]) ):
+	for ival in range( len(vars()['peakIndex'+ichr]) ):
 		ipeak = np.amax( peakPos[vars()['peakPosV'+ichr][0,ival]:vars()['peakPosV'+ichr][1,ival]] )
 		if ival>-1:
-			vars()['validationIndex'+ichr][ival] = ipeak
+			vars()['peakIndex'+ichr][ival] = ipeak
 		else:
-			vars()['validationIndex'+ichr][ival] = -9999
+			vars()['peakIndex'+ichr][ival] = -9999
 
-	print 'Chromosome', ichr+':', str(int(100*np.round( len(np.unique(vars()['validationIndex'+ichr][vars()['validationIndex'+ichr]>-1]))/float(len(np.unique(vars()['peakPosV'+ichr][0]))),2)))+'% match','out of', len(np.unique(vars()['peakPosV'+ichr][0])), 'peaks'
+	print 'Chromosome', ichr+':', str(int(100*np.round( len(np.unique(vars()['peakIndex'+ichr][vars()['peakIndex'+ichr]>-1]))/float(len(np.unique(vars()['peakPosV'+ichr][0]))),2)))+'% match','out of', len(np.unique(vars()['peakPosV'+ichr][0])), 'peaks'
 
 ####################################################################
 # Load Reference Genes
 ####################################################################
+print '\nLoad Reference Genes'
 
 geneNameV = np.array(validationDataFile['geneName'])
 geneIDV = np.array(validationDataFile['geneID'])
@@ -245,188 +245,155 @@ intercept = np.array(validationDataFile['intercept'])
 fold_change = np.array(validationDataFile['fold_change'])
 
 for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22']:
-	 # Limit to only the current chromosome
-	 chrMask = peakChrV=='chr'+ichr
-	 vars()['geneNameV'+ichr] = geneNameV[chrMask]
-	 vars()['directionV'+ichr] = directionV[chrMask]
-	 vars()['pValue'+ichr] = pValue[chrMask]
-	 vars()['beta'+ichr] = beta[chrMask]
-	 vars()['intercept'+ichr] = intercept[chrMask]
-	 vars()['fold_change'+ichr] = fold_change[chrMask]
+	# Limit to only the current chromosome
+	chrMask = peakChrV=='chr'+ichr
+	vars()['geneNameV'+ichr] = geneNameV[chrMask]
+	vars()['directionV'+ichr] = directionV[chrMask]
+	vars()['pValue1D'+ichr] = pValue[chrMask]
+	vars()['beta1D'+ichr] = beta[chrMask]
+	vars()['intercept1D'+ichr] = intercept[chrMask]
+	vars()['fold_change1D'+ichr] = fold_change[chrMask]
 
-	 # Sort variables by position
-	 sort = np.argsort(vars()['peakPosV'+ichr][0])
-	 vars()['geneNameV'+ichr] = vars()['geneNameV'+ichr][sort]
-	 vars()['directionV'+ichr] = vars()['directionV'+ichr][sort]
-	 vars()['pValue'+ichr] = vars()['pValue'+ichr][sort]
-	 vars()['beta'+ichr] = vars()['beta'+ichr][sort]
-	 vars()['intercept'+ichr] = vars()['intercept'+ichr][sort]
-	 vars()['fold_change'+ichr] = vars()['fold_change'+ichr][sort]
+	# Sort variables by position
+	sort = np.argsort(vars()['peakPosV'+ichr][0])
+	vars()['geneNameV'+ichr] = vars()['geneNameV'+ichr][sort]
+	vars()['directionV'+ichr] = vars()['directionV'+ichr][sort]
+	vars()['pValue1D'+ichr] = vars()['pValue1D'+ichr][sort]
+	vars()['beta1D'+ichr] = vars()['beta1D'+ichr][sort]
+	vars()['intercept1D'+ichr] = vars()['intercept1D'+ichr][sort]
+	vars()['fold_change1D'+ichr] = vars()['fold_change1D'+ichr][sort]
 
-	 # geneIndex = array of reference genes to which rna gene they correpond to
-	 vars()['geneIndex'+ichr] = -9999*np.ones(shape=(vars()['geneNameV'+ichr].shape),dtype =object)
-	 for igene in range(len(vars()['geneNameV'+ichr])):
-		 if np.amax(vars()['geneName'+ichr] == vars()['geneNameV'+ichr][igene])==True:
-			 index = np.where( vars()['geneName'+ichr] == vars()['geneNameV'+ichr][igene])[0][0]
-			 vars()['geneIndex'+ichr][igene] = index
+	# geneIndex = array of reference genes to which rna gene they correpond to
+	vars()['geneIndex'+ichr] = -9999*np.ones(shape=(vars()['geneNameV'+ichr].shape),dtype=int)
+	for igene in range(len(vars()['geneNameV'+ichr])):
+	    if np.amax(vars()['geneName'+ichr] == vars()['geneNameV'+ichr][igene])==True:
+	   	 index = np.where( vars()['geneName'+ichr] == vars()['geneNameV'+ichr][igene])[0][0]
+	   	 vars()['geneIndex'+ichr][igene] = index
 
-	 print 'Chromosome', ichr+':', str(int(100*np.round( len(np.unique(vars()['geneIndex'+ ichr][vars()['geneIndex'+ichr]>-1]))/float(len(np.unique(vars()['geneNameV'+ichr]))),2))) +'% match','out of', len(np.unique(vars()['geneNameV'+ichr])), 'genes'
+	print 'Chromosome', ichr+':', str(int(100*np.round( len(np.unique(vars()['geneIndex'+ ichr][vars()['geneIndex'+ichr]>-1]))/float(len(np.unique(vars()['geneNameV'+ichr]))),2))) +'% match','out of', len(np.unique(vars()['geneNameV'+ichr])), 'genes'
 
 ###################################################################
-# Connect Peaks to Genes
+# Create Arrays of Connections
 ###################################################################
-print 'Connect Peaks to Genes'
+print 'Create Arrays of Connections'
 
-abcConnectedSep = []
-betaGconnectedSep = []
-betaPconnectedSep = []
-abcNotConnectedSep = []
-abcUnknownSep = []
-
-distConnectedSep = []
-distNotConnectedSep = []
-distUnknownSep = []
-
-activityConnectedSep = []
-activityNotConnectedSep = []
-activityUnknownSep = []
-
-rnaConnectedSep = []
-rnaNotConnectedSep = []
-rnaUnknownSep = []
-
-corrConnectedSep = []
-corrNotConnectedSep = []
-corrUnknownSep = []
+abcConnected = []
+abcNotConnected= []
+abcUnknown = []
 for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22']:
-	nPeaks = vars()['activity'+ichr].shape[1]
-	#nGenes = vars()['hic'+ichr].shape[0]
-	nGenes= vars()['expression'+ichr].shape[1]
-	#vars()['geneQTL'+ichr] = np.ma.masked_array(vars()['geneQTL'+ichr], vars()['geneQTL'+ichr]==0)
-	#vars()['geneBeta'+ichr] = np.ma.masked_array(vars()['geneBeta'+ichr], vars()['geneBeta'+ichr]==0)
-	vars()['geneQTL'+ichr] = np.ma.masked_array(vars()['geneQTL'+ichr], vars()['geneQTL'+ichr]==0)
-	vars()['geneBeta'+ichr] = np.ma.masked_array(vars()['geneBeta'+ichr], vars()['geneBeta'+ichr]==0)
-	vars()['peakQTL'+ichr] = np.ma.masked_array(vars()['peakQTL'+ichr], vars()['peakQTL'+ichr]==0)
-	vars()['peakBeta'+ichr] = np.ma.masked_array(vars()['peakBeta'+ichr], vars()['peakBeta'+ichr]==0)
-	#vars()['genePeakArray'+ichr] = np.zeros(shape = (nGenes)) # array of gene index to peak index [known connections]
-	vars()['genePeakArray'+ichr] = np.zeros(shape = (nGenes)) # array of gene index to peak index [known connections]
+	nPeaks = len(vars()['expression'+ichr])
+	nGenes = len(vars()['activity'+ichr])
+	## connections = array of p-values, genes by peaks
+	vars()['connections'+ichr] = np.ones(shape=(nPeaks,nGenes))
+	vars()['beta'+ichr] = np.ones(shape=(nPeaks,nGenes))
+	vars()['intercept'+ichr] = np.ones(shape=(nPeaks,nGenes))
+	vars()['foldChange'+ichr] = np.ones(shape=(nPeaks,nGenes))
+	for i in range(len(vars()['peakIndex'+ichr])):
+		ipeak = vars()['peakIndex'+ichr][i]
+		igene = vars()['geneIndex'+ichr][i]
+		if ipeak<-1 or igene<-1: continue
+		vars()['connections'+ichr][igene,ipeak] = vars()['pValue1D'+ichr][i]
+		vars()['beta'+ichr][igene,ipeak] = vars()['beta1D'+ichr][i]
+		vars()['intercept'+ichr][igene,ipeak] = vars()['intercept1D'+ichr][i]
+		vars()['foldChange'+ichr][igene,ipeak] = vars()['fold_change1D'+ichr][i]
 
-	notConnectedArray = np.ones(shape=(nGenes,nPeaks),dtype=bool) # 0 = not connected
-	unknownArray = np.zeros(shape=(nGenes,nPeaks),dtype=bool) # 0 = unknown
-	for ipeak in range(len(vars()['peakQTL'+ichr])):
-		if np.ma.is_masked(vars()['peakQTL'+ichr][ipeak]): continue
-		if np.amax(vars()['geneQTL'+ichr]==vars()['peakQTL'+ichr][ipeak])==False:
-			notConnectedArray[:,ipeak] = 0
-			unknownArray[:,ipeak] = 1
-		#if np.amax(vars()['geneQTLSmall'+ichr]==vars()['peakQTL'+ichr][ipeak])==False:
-		#	#notConnectedArray[:,ipeak] = 0
-		#	unknownArraySmall[:,ipeak] = 1
-		
-		### Not Connected ###
-		if np.amax(vars()['geneQTL'+ichr]==vars()['peakQTL'+ichr][ipeak])==True:
-			geneIndex = np.where(vars()['geneQTL'+ichr]==vars()['peakQTL'+ichr][ipeak])[0]
-			vars()['genePeakArray'+ichr][geneIndex] = ipeak
-			unknownArray[:,ipeak] = 1
-	
-			geneIndexOpposite = np.arange( nGenes )
-			for i in range(len(geneIndex)):
-				geneIndexOpposite = geneIndexOpposite[geneIndexOpposite!=geneIndex[i]]
-			notConnectedArray[geneIndexOpposite,ipeak] = 0
-		####################
+	exit()
+	#vars()['connections'+ichr] = np.ma.masked_array(vars()['connections'+ichr],vars()['connections'+ichr]==1)
+	abcConnected.append(vars()['abc'+ichr][vars()['connections'+ichr]<0.05])
+	abcNotConnected.append(vars()['abc'+ichr][vars()['connections'+ichr][vars()['connections'+ichr]<1]>0.05])
+	abcUnknown.append(vars()['abc'+ichr][vars()['connections'+ichr]==1])
 
-	vars()['geneConnections'+ichr] = np.where(vars()['genePeakArray'+ichr]!=0)[0]
-	vars()['peakConnections'+ichr] = np.array(vars()['genePeakArray'+ichr][vars()['genePeakArray'+ichr]!=0],dtype=int)
-	#vars()['geneConnectionsSmall'+ichr] = np.where(vars()['genePeakArraySmall'+ichr]!=0)[0]
-	#vars()['peakConnectionsSmall'+ichr] = np.array(vars()['genePeakArraySmall'+ichr][vars()['genePeakArraySmall'+ichr]!=0],dtype=int)
-	
-	meanABC = np.array(vars()['abc'+ichr])
-	activity = np.mean(np.array(vars()['activity'+ichr]),axis=0)
-	meanActivity = np.zeros(shape=(meanABC.shape))
-	for igene in range(len(meanABC[:,0])):
-		meanActivity[igene,:] = activity
-	rna = np.mean(np.array(vars()['expression'+ichr]),axis=0)
-	meanRNA = np.zeros(shape=(meanABC.shape))
-	for ipeak in range(len(meanABC[0,:])):
-		meanRNA[:,ipeak] = rna
-	meanDist = np.array(vars()['dist'+ichr])
-	meanCorr = np.array(vars()['corr'+ichr])
-
-	betaG = vars()['geneBeta'+ichr][vars()['geneConnections'+ichr]]
-	betaP = np.concatenate(vars()['peakBeta'+ichr][vars()['peakConnections'+ichr]])
-	betaPconnectedSep.append(betaP)
-	betaGconnectedSep.append(betaG)
-	abcConnectedSep.append( meanABC[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
-	abcNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanABC,notConnectedArray)))
-	abcUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanABC,unknownArray)))
-
-	distConnectedSep.append( meanDist[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
-	distNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanDist,notConnectedArray)))
-	distUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanDist,unknownArray)))
-
-	activityConnectedSep.append( meanActivity[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
-	activityNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanActivity,notConnectedArray)))
-	activityUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanActivity,unknownArray)))
-
-	rnaConnectedSep.append( meanRNA[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
-	rnaNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanRNA,notConnectedArray)))
-	rnaUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanRNA,unknownArray)))
-
-	corrConnectedSep.append( meanCorr[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
-	corrNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanCorr,notConnectedArray)))
-	corrUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanCorr,unknownArray)) )
-
-####### Define Masks #######
-abcConnected = np.array(np.concatenate(abcConnectedSep))
-distConnected = np.array(np.concatenate(distConnectedSep))
-mask = np.invert(np.amax([abcConnected==0,distConnected==0], axis=0))
-
-abcNotConnected = np.array(np.concatenate(abcNotConnectedSep))
-distNotConnected = np.array(np.concatenate(distNotConnectedSep))
-maskNotConnected = np.invert(np.amax([abcNotConnected==0,distNotConnected==0], axis=0))
-
-abcUnknown = np.array(np.concatenate(abcUnknownSep))
-distUnknown = np.array(np.concatenate(distUnknownSep))
-maskUnknown = np.invert(np.amax([abcUnknown==0,distUnknown==0], axis=0))
-
-####### Concatenate Arrays #######
-distConnected = distConnected[mask]
-distNotConnected = distNotConnected[maskNotConnected]
-distUnknown = distUnknown[maskUnknown]
-
-activityConnected = np.array(np.concatenate(activityConnectedSep))
-activityConnected = activityConnected[mask]
-activityNotConnected = np.array(np.concatenate(activityNotConnectedSep))
-activityNotConnected = activityNotConnected[maskNotConnected]
-activityUnknown = np.array(np.concatenate(activityUnknownSep))
-activityUnknown = activityUnknown[maskUnknown]
-
-rnaConnected = np.array(np.concatenate(rnaConnectedSep))
-rnaConnected = rnaConnected[mask]
-rnaNotConnected = np.array(np.concatenate(rnaNotConnectedSep))
-rnaNotConnected = rnaNotConnected[maskNotConnected]
-rnaUnknown = np.array(np.concatenate(rnaUnknownSep))
-rnaUnknown = rnaUnknown[maskUnknown]
-
-corrConnected = np.array(np.concatenate(corrConnectedSep))
-corrConnected = corrConnected[mask]
-corrNotConnected = np.array(np.concatenate(corrNotConnectedSep))
-corrNotConnected = corrNotConnected[maskNotConnected]
-corrUnknown = np.array(np.concatenate(corrUnknownSep))
-corrUnknown = corrUnknown[maskUnknown]
-
-betaPconnect = np.array(np.concatenate(betaPconnectedSep))
-betaPconnect = betaPconnect[mask]
-betaGconnect = np.array(np.concatenate(betaGconnectedSep))
-betaGconnect = betaGconnect[mask]
-abcConnected = abcConnected[mask]
-abcNotConnected = abcNotConnected[maskNotConnected]
-abcUnknown = abcUnknown[maskUnknown]
+#	meanABC = np.array(vars()['abc'+ichr])
+#	activity = np.mean(np.array(vars()['activity'+ichr]),axis=0)
+#	meanActivity = np.zeros(shape=(meanABC.shape))
+#	for igene in range(len(meanABC[:,0])):
+#		meanActivity[igene,:] = activity
+#	rna = np.mean(np.array(vars()['expression'+ichr]),axis=0)
+#	meanRNA = np.zeros(shape=(meanABC.shape))
+#	for ipeak in range(len(meanABC[0,:])):
+#		meanRNA[:,ipeak] = rna
+#	meanDist = np.array(vars()['dist'+ichr])
+#	meanCorr = np.array(vars()['corr'+ichr])
+#
+#	betaG = vars()['geneBeta'+ichr][vars()['geneConnections'+ichr]]
+#	betaP = np.concatenate(vars()['peakBeta'+ichr][vars()['peakConnections'+ichr]])
+#	betaPconnectedSep.append(betaP)
+#	betaGconnectedSep.append(betaG)
+#	abcConnectedSep.append( meanABC[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
+#	abcNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanABC,notConnectedArray)))
+#	abcUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanABC,unknownArray)))
+#
+#	distConnectedSep.append( meanDist[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
+#	distNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanDist,notConnectedArray)))
+#	distUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanDist,unknownArray)))
+#
+#	activityConnectedSep.append( meanActivity[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
+#	activityNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanActivity,notConnectedArray)))
+#	activityUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanActivity,unknownArray)))
+#
+#	rnaConnectedSep.append( meanRNA[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
+#	rnaNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanRNA,notConnectedArray)))
+#	rnaUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanRNA,unknownArray)))
+#
+#	corrConnectedSep.append( meanCorr[vars()['geneConnections'+ichr],vars()['peakConnections'+ichr]] )
+#	corrNotConnectedSep.append( np.ma.compressed(np.ma.masked_array(meanCorr,notConnectedArray)))
+#	corrUnknownSep.append( np.ma.compressed(np.ma.masked_array(meanCorr,unknownArray)) )
+#
+######## Define Masks #######
+#abcConnected = np.array(np.concatenate(abcConnectedSep))
+#distConnected = np.array(np.concatenate(distConnectedSep))
+#mask = np.invert(np.amax([abcConnected==0,distConnected==0], axis=0))
+#
+#abcNotConnected = np.array(np.concatenate(abcNotConnectedSep))
+#distNotConnected = np.array(np.concatenate(distNotConnectedSep))
+#maskNotConnected = np.invert(np.amax([abcNotConnected==0,distNotConnected==0], axis=0))
+#
+#abcUnknown = np.array(np.concatenate(abcUnknownSep))
+#distUnknown = np.array(np.concatenate(distUnknownSep))
+#maskUnknown = np.invert(np.amax([abcUnknown==0,distUnknown==0], axis=0))
+#
+######## Concatenate Arrays #######
+#distConnected = distConnected[mask]
+#distNotConnected = distNotConnected[maskNotConnected]
+#distUnknown = distUnknown[maskUnknown]
+#
+#activityConnected = np.array(np.concatenate(activityConnectedSep))
+#activityConnected = activityConnected[mask]
+#activityNotConnected = np.array(np.concatenate(activityNotConnectedSep))
+#activityNotConnected = activityNotConnected[maskNotConnected]
+#activityUnknown = np.array(np.concatenate(activityUnknownSep))
+#activityUnknown = activityUnknown[maskUnknown]
+#
+#rnaConnected = np.array(np.concatenate(rnaConnectedSep))
+#rnaConnected = rnaConnected[mask]
+#rnaNotConnected = np.array(np.concatenate(rnaNotConnectedSep))
+#rnaNotConnected = rnaNotConnected[maskNotConnected]
+#rnaUnknown = np.array(np.concatenate(rnaUnknownSep))
+#rnaUnknown = rnaUnknown[maskUnknown]
+#
+#corrConnected = np.array(np.concatenate(corrConnectedSep))
+#corrConnected = corrConnected[mask]
+#corrNotConnected = np.array(np.concatenate(corrNotConnectedSep))
+#corrNotConnected = corrNotConnected[maskNotConnected]
+#corrUnknown = np.array(np.concatenate(corrUnknownSep))
+#corrUnknown = corrUnknown[maskUnknown]
+#
+#betaPconnect = np.array(np.concatenate(betaPconnectedSep))
+#betaPconnect = betaPconnect[mask]
+#betaGconnect = np.array(np.concatenate(betaGconnectedSep))
+#betaGconnect = betaGconnect[mask]
+#abcConnected = abcConnected[mask]
+#abcNotConnected = abcNotConnected[maskNotConnected]
+#abcUnknown = abcUnknown[maskUnknown]
 
 ###################################################################
 # Distributions
 ###################################################################
 ############## ABC ##############
 #logbins = np.logspace(np.log10(1e-6),np.log10(1),50)
+connections1 = np.ma.masked_array(connections1,connections1==1)
+abcConnected = connections1
+
 logbins = np.logspace(np.log10(np.amin(abcUnknown)),np.log10(np.amax(abcConnected)),50)
 
 Tabc,Pabc = stats.ttest_ind(abcConnected,abcUnknown,equal_var=False)
