@@ -17,13 +17,14 @@ wdfigs = '/pbld/mcg/lillianpetersen/ABC/figures/'
 MakePlots = False
 
 # MCG B ALL Samples
-MCGs = ['MCG001', 'MCG002', 'MCG003', 'MCG005', 'MCG006', 'MCG009', 'MCG010', 'MCG011', 'MCG012', 'MCG013', 'MCG016', 'MCG017', 'MCG019', 'MCG020', 'MCG023', 'MCG024']
+MCGs = ['MCG001', 'MCG002', 'MCG003', 'MCG005', 'MCG006', 'MCG009', 'MCG010', 'MCG011', 'MCG012', 'MCG013', 'MCG016', 'MCG019', 'MCG020', 'MCG023', 'MCG024', 'MCG027', 'MCG028', 'MCG029', 'MCG034', 'MCG035', 'MCG036', 'MCG037', 'MCG038', 'MCG039']
+nSamples = len(MCGs)
 
 ###################################################################
 # Load ATAC
 ###################################################################
 print('Load ATAC')
-atacFile = np.swapaxes(np.array(pd.read_csv(wd+'data/MCG_merged_rpm_quantile.txt', sep = '\t', header = None)),0,1)
+atacFile = np.swapaxes(np.array(pd.read_csv(wd+'data/B_ALL_merged_counts.rpkm.qn.txt', sep = '\t', header = None)),0,1)
 
 peakName = atacFile[0]
 nPeaks = len(peakName)
