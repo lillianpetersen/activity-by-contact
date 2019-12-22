@@ -17,14 +17,14 @@ wdfigs = '/pbld/mcg/lillianpetersen/ABC/figures/'
 MakePlots = False
 
 # MCG B ALL Samples
-MCGs = ['MCG001', 'MCG002', 'MCG003', 'MCG005', 'MCG006', 'MCG009', 'MCG010', 'MCG011', 'MCG012', 'MCG013', 'MCG016', 'MCG019', 'MCG020', 'MCG023', 'MCG024', 'MCG027', 'MCG028', 'MCG029', 'MCG034', 'MCG035', 'MCG036', 'MCG037', 'MCG038', 'MCG039']
+MCGs = ['MCG001', 'MCG002', 'MCG003', 'MCG005', 'MCG006', 'MCG009', 'MCG010', 'MCG011', 'MCG012', 'MCG013', 'MCG016', 'MCG017', 'MCG019', 'MCG020', 'MCG023', 'MCG024', 'MCG027', 'MCG028', 'MCG034', 'MCG035', 'MCG036', 'MCG037', 'MCG038', 'MCG039']
 nSamples = len(MCGs)
 
 ###################################################################
 # Load ATAC
 ###################################################################
 print('Load ATAC')
-atacFile = np.swapaxes(np.array(pd.read_csv(wd+'data/B_ALL_merged_counts.rpkm.qn.txt', sep = '\t', header = None)),0,1)
+atacFile = np.swapaxes(np.array(pd.read_csv(wd+'data/B_ALL_atac.rpkm.qn.txt', sep = '\t', header = None)),0,1)
 
 peakName = atacFile[0]
 nPeaks = len(peakName)
@@ -45,9 +45,9 @@ for isample in range(nSamples):
 
 if MakePlots:
 	plt.clf()
-	n, bins, patches = plt.hist(np.amax(atacFull,axis=0), bins=100, range=[0,6])
+	n, bins, patches = plt.hist(np.amax(atacFull,axis=0), bins=100, range=[0,10])
 	plt.title('Histogram of ATAC Peak Intensity (nPeaks = '+str(nPeaks)+')')
-	plt.xlabel('rpm ATAC')
+	plt.xlabel('ATAC RPKM')
 	plt.ylabel('Number of Peaks')
 	#plt.xlim([0,3])
 	#plt.ylim([0,600])

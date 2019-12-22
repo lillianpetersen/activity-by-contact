@@ -10,7 +10,7 @@ wdfigs = '/pbld/mcg/lillianpetersen/ABC/figures/'
 MakePlots = False
 
 # MCG B ALL Samples
-MCGs = ['MCG001', 'MCG002', 'MCG003', 'MCG005', 'MCG006', 'MCG009', 'MCG010', 'MCG011', 'MCG012', 'MCG013', 'MCG016', 'MCG017', 'MCG019', 'MCG020', 'MCG023', 'MCG024']
+MCGs = ['MCG001', 'MCG002', 'MCG003', 'MCG005', 'MCG006', 'MCG009', 'MCG010', 'MCG011', 'MCG012', 'MCG013', 'MCG016', 'MCG017', 'MCG019', 'MCG020', 'MCG023', 'MCG024', 'MCG027', 'MCG028', 'MCG034', 'MCG035', 'MCG036', 'MCG037', 'MCG038', 'MCG039']
 nSamples = len(MCGs)
 
 ###################################################################
@@ -18,17 +18,18 @@ nSamples = len(MCGs)
 ###################################################################
 print('Load RNA')
 
-rnaFile = np.swapaxes(np.array(pd.read_csv(wd+'data/MCG_RNA.rpkm.txt', sep = '\t', header = None)),0,1)
+rnaFile = np.swapaxes(np.array(pd.read_csv(wd+'data/B_ALL_rna.rpkm.qn.txt', sep = '\t', header = None)),0,1)
 
-nGenes = rnaFile.shape[1]
-chrRNA = rnaFile[0]
-positionRNA = np.array(rnaFile[1:3], dtype = int) # start,stop for each gene
+nGenes = rnaFile.shape[1] 
+chrRNA = rnaFile[2]
+positionRNA = np.array(rnaFile[3:5], dtype = int) # start,stop for each gene
 lengthRNA = positionRNA[1] - positionRNA[0] # length of gene
-direction = np.array(rnaFile[3]) # + or -
+direction = np.array(rnaFile[5]) # + or -
 direction[direction=='+']=1
 direction[direction=='-']=-1
 direction = np.array(direction,dtype=int)
-geneNameFull = rnaFile[5]
+geneNameFull = rnaFile[0]
+geneIDFull = rnaFile[1]
 
 # expression for all 60000 genes
 expressionFull = np.zeros(shape = (nSamples,nGenes)) 
@@ -57,7 +58,6 @@ if MakePlots:
 	plt.grid(True)
 	plt.show()
 
-np.save(wdvars+'geneNameAllFull.npy',geneNameFull)
 ### Dictionary of geneName to chromosome and position
 geneChrAllDict = {}
 genePosAllDict = {}
@@ -70,7 +70,7 @@ pickle.dump(genePosAllDict, open(wdvars+'genePosAllDict.p','wb'))
 # all Samples have expressions > 0.1
 keepRNAall = expressionFull>0.1
 keepRNAsum = np.sum(keepRNAall,axis=0)
-keepRNA = 1-(keepRNAsum==nSamples)
+keepRNA = 1-(keepRNAsum>=nSamples*.75)
 # length is > 200bp
 keepLength = lengthRNA>200
 keepLength = 1-keepLength
@@ -88,6 +88,7 @@ chrRNA = np.ma.compressed(np.ma.masked_array(chrRNA,keep))
 lengthRNA = np.ma.compressed(np.ma.masked_array(lengthRNA,keep))
 direction = np.ma.compressed(np.ma.masked_array(direction,keep))
 geneName = np.ma.compressed(np.ma.masked_array(geneNameFull,keep))
+geneID = np.ma.compressed(np.ma.masked_array(geneIDFull,keep))
 positionRNA = np.ma.compress_cols(np.ma.masked_array(positionRNA,keep2))
 
 # remove duplicate genes
@@ -105,9 +106,10 @@ chrRNA = np.ma.compressed(np.ma.masked_array(chrRNA,mask))
 lengthRNA = np.ma.compressed(np.ma.masked_array(lengthRNA,mask))
 direction = np.ma.compressed(np.ma.masked_array(direction,mask))
 geneName = np.ma.compressed(np.ma.masked_array(geneName,mask))
+geneID = np.ma.compressed(np.ma.masked_array(geneID,mask))
 positionRNA = np.ma.compress_cols(np.ma.masked_array(positionRNA,mask2))
 
-np.save(wdvars+'geneNameAll.npy',geneName)
+np.save(wdvars+'geneIDall.npy',geneID)
 ### Dictionary of geneName to chromosome and position
 geneChrAllDict = {}
 genePosAllDict = {}
@@ -118,7 +120,7 @@ pickle.dump(geneChrAllDict, open(wdvars+'geneChrAllDict.p','wb'))
 pickle.dump(genePosAllDict, open(wdvars+'genePosAllDict.p','wb'))
 
 # remove genes that do not code for proteins
-proteinCodingMask = np.load(wdvars+'proteinCodingMask.npy')
+proteinCodingMask = np.load(wdvars+'leukemia/proteinCodingMask.npy')
 maskFull = np.zeros(shape = (nSamples,len(proteinCodingMask)), dtype = bool)
 for isample in range(nSamples):
 	maskFull[isample] = proteinCodingMask
@@ -130,6 +132,7 @@ chrRNA = np.ma.compressed(np.ma.masked_array(chrRNA,proteinCodingMask))
 lengthRNA = np.ma.compressed(np.ma.masked_array(lengthRNA,proteinCodingMask))
 direction = np.ma.compressed(np.ma.masked_array(direction,proteinCodingMask))
 geneName = np.ma.compressed(np.ma.masked_array(geneName,proteinCodingMask))
+geneID = np.ma.compressed(np.ma.masked_array(geneID,proteinCodingMask))
 positionRNA = np.ma.compress_cols(np.ma.masked_array(positionRNA,mask2))
 
 ### Dictionary of geneName to chromosome and position
@@ -151,13 +154,15 @@ nGenes = expression.shape[1]
 sortIndexChr = np.argsort(chrRNA)
 chrRNA = chrRNA[sortIndexChr]
 geneName = geneName[sortIndexChr]
+geneID = geneID[sortIndexChr]
 np.save(wdvars+'RNA/geneName.npy',geneName)
 positionRNA = positionRNA[:,sortIndexChr]
 expression = expression[:,sortIndexChr]
-for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','X','Y']:
+for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','X']:
 	# define different variables for each chromosome
 	vars()['expression'+ichr] = expression[:,(chrRNA=='chr'+ichr)]
 	vars()['geneName'+ichr] = geneName[(chrRNA=='chr'+ichr)]
+	vars()['geneID'+ichr] = geneID[(chrRNA=='chr'+ichr)]
 	vars()['chrRNA'+ichr] = chrRNA[(chrRNA=='chr'+ichr)]
 	vars()['direction'+ichr] = direction[(chrRNA=='chr'+ichr)]
 	vars()['positionRNA'+ichr] = positionRNA[:,(chrRNA=='chr'+ichr)]
@@ -166,18 +171,19 @@ for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','
 	sortIndexPos = np.argsort(vars()['positionRNA'+ichr][0,:])
 	vars()['expression'+ichr] = vars()['expression'+ichr][:,sortIndexPos]
 	vars()['geneName'+ichr] = vars()['geneName'+ichr][sortIndexPos]
+	vars()['geneID'+ichr] = vars()['geneID'+ichr][sortIndexPos]
 	vars()['chrRNA'+ichr] = vars()['chrRNA'+ichr][sortIndexPos]
 	vars()['direction'+ichr] = vars()['direction'+ichr][sortIndexPos]
 	vars()['positionRNA'+ichr] = vars()['positionRNA'+ichr][:,sortIndexPos]
 	vars()['nGenes'+ichr] = vars()['expression'+ichr].shape[1]
-	if ichr=='X': exit()
 	
-	np.save(wdvars+'RNA/expression'+ichr+'.npy', vars()['expression'+ichr])
-	np.save(wdvars+'RNA/geneName'+ichr+'.npy', vars()['geneName'+ichr])
-	np.save(wdvars+'RNA/chrRNA'+ichr+'.npy', vars()['chrRNA'+ichr])
-	np.save(wdvars+'RNA/positionRNA'+ichr+'.npy', vars()['positionRNA'+ichr])
-	np.save(wdvars+'RNA/nGenes'+ichr+'.npy', vars()['nGenes'+ichr])
-	np.save(wdvars+'RNA/direction'+ichr+'.npy', vars()['direction'+ichr])
+	#np.save(wdvars+'RNA/expression'+ichr+'.npy', vars()['expression'+ichr])
+	#np.save(wdvars+'RNA/geneName'+ichr+'.npy', vars()['geneName'+ichr])
+	#np.save(wdvars+'RNA/geneID'+ichr+'.npy', vars()['geneID'+ichr])
+	#np.save(wdvars+'RNA/chrRNA'+ichr+'.npy', vars()['chrRNA'+ichr])
+	#np.save(wdvars+'RNA/positionRNA'+ichr+'.npy', vars()['positionRNA'+ichr])
+	#np.save(wdvars+'RNA/nGenes'+ichr+'.npy', vars()['nGenes'+ichr])
+	#np.save(wdvars+'RNA/direction'+ichr+'.npy', vars()['direction'+ichr])
 
 ############################
 
