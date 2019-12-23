@@ -62,5 +62,5 @@ for (igroup in seq(length(typeList))){
 	p = p.adjust(qlf$table$PValue,method="fdr")
 	dev.off()
 	
-	write.table(cbind(y$genes,qlf$table,p),file=paste(gene_file,typeString[igroup],'_merged_counts.output.txt',sep=""),sep="\t",col.names=TRUE,row.names=FALSE) # write to a file
+	write.table(cbind(y$genes,qlf$table,p),file=paste(gene_file,'differential_genes/',typeString[igroup],'_differential_genes.txt',sep=""),sep="\t",col.names=TRUE,row.names=FALSE, quote=FALSE) # write to a file
 }
