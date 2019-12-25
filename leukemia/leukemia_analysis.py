@@ -17,6 +17,7 @@ from sklearn.decomposition import PCA
 
 wd = '/pbld/mcg/lillianpetersen/ABC/'
 wdvars = '/pbld/mcg/lillianpetersen/ABC/saved_variables/'
+wddata = '/pbld/mcg/lillianpetersen/ABC/data/'
 wdfigs = '/pbld/mcg/lillianpetersen/ABC/figures/'
 wdfiles = '/pbld/mcg/lillianpetersen/ABC/written_files/'
 MakePlots = False
@@ -72,6 +73,7 @@ for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','
 		# Load arrays saved from load_rna.npy
 		vars()['expression'+ichr] = np.load(wdvars+'RNA/expression'+ichr+'.npy')
 		vars()['geneName'+ichr] = np.load(wdvars+'RNA/geneName'+ichr+'.npy')
+		vars()['geneID'+ichr] = np.load(wdvars+'RNA/geneID'+ichr+'.npy')
 		vars()['chrRNA'+ichr] = np.load(wdvars+'RNA/chrRNA'+ichr+'.npy')
 		vars()['positionRNA'+ichr] = np.load(wdvars+'RNA/positionRNA'+ichr+'.npy')
 		vars()['direction'+ichr] = np.load(wdvars+'RNA/direction'+ichr+'.npy')
@@ -114,3 +116,54 @@ for itype in range(len(subtypes)):
 ###################################################################
 # Differential Genes
 ###################################################################
+for itype in range(len(subtypes)):
+	subtype = typeNames[itype]
+	subtypeName = subtypes[itype]
+	print('differential genes: '+subtypeName)
+
+	vars()['difFile'+subtype] = pd.read_csv(wddata+'differential_genes/'+subtypeName+'_significant_genes.txt', sep = '\t', header=0)
+	vars()['difGeneID'+subtype] = vars()['difFile'+subtype]['genes']
+	vars()['difP'+subtype] = vars()['difFile'+subtype]['p']
+	vars()['difFC'+subtype] = vars()['difFile'+subtype]['logFC']
+	vars()['difGeneName'+subtype] = np.zeros( shape=len(vars()['difGeneID'+subtype]), dtype=object)
+	vars()['difChr'+subtype] = np.zeros( shape=len(vars()['difGeneID'+subtype]), dtype=object)
+
+	for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','X']:
+
+		genesIndex = np.isin(vars()['difGeneID'+subtype], vars()['geneID'+ichr])
+
+		for igene in range(sum(genesIndex)):
+			geneIndexDif = np.where(genesIndex)[0][igene]
+			geneID = vars()['difGeneID'+subtype][geneIndexDif]
+			geneIndexRNA = np.where( vars()['geneID'+ichr]==geneID )[0][0]
+			print 'chr'+ichr, igene, geneIndexDif, geneIndexRNA, geneID
+			vars()['difGeneName'+subtype][geneIndexDif] = vars()['geneName'+ichr][geneIndexRNA]
+			vars()['difChr'+subtype][geneIndexDif] = ichr
+
+	mask = vars()['difGeneName'+subtype]==0
+	vars()['difGeneID'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difGeneID'+subtype], mask))
+	vars()['difGeneName'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difGeneName'+subtype], mask))
+	vars()['difP'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difP'+subtype], mask))
+	vars()['difFC'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difFC'+subtype], mask))
+	vars()['difChr'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difChr'+subtype], mask))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

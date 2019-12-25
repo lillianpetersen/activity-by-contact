@@ -78,6 +78,7 @@ for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','
 		# Load arrays saved from load_rna.npy
 		vars()['expression'+ichr] = np.load(wdvars+'RNA/before_processing/expression'+ichr+'.npy')
 		vars()['geneName'+ichr] = np.load(wdvars+'RNA/before_processing/geneName'+ichr+'.npy')
+		vars()['geneID'+ichr] = np.load(wdvars+'RNA/before_processing/geneID'+ichr+'.npy')
 		vars()['chrRNA'+ichr] = np.load(wdvars+'RNA/before_processing/chrRNA'+ichr+'.npy')
 		vars()['positionRNA'+ichr] = np.load(wdvars+'RNA/before_processing/positionRNA'+ichr+'.npy')
 		vars()['direction'+ichr] = np.load(wdvars+'RNA/before_processing/direction'+ichr+'.npy')
@@ -146,27 +147,30 @@ for itype in range(len(subtypes)):
 				indices = np.isin(vars()['geneName'+ichr], vars()['geneMatrix'+ichr])
 				vars()['expression'+ichr] = vars()['expression'+ichr][:,indices]
 				vars()['geneName'+ichr] = vars()['geneName'+ichr][indices]
+				vars()['geneID'+ichr] = vars()['geneID'+ichr][indices]
 				vars()['tss'+ichr] = vars()['tss'+ichr][indices]
 				vars()['positionRNA'+ichr] = vars()['positionRNA'+ichr][:,indices]
 
-		np.save(wdvars+'HiC/general/geneStart'+ichr+'.npy', vars()['geneStart'+ichr])
-		np.save(wdvars+'HiC/general/geneMatrix'+ichr+'.npy', vars()['geneMatrix'+ichr])
-		np.save(wdvars+'HiC/general/peakStart'+ichr+'.npy', vars()['peakStart'+ichr])
-		np.save(wdvars+'HiC/general/peakMatrix'+ichr+'.npy', vars()['peakMatrix'+ichr])
-		np.save(wdvars+'HiC/'+subtypeName+'/hic'+ichr+'.npy', vars()['hic'+subtype+ichr])
+		#np.save(wdvars+'HiC/general/geneStart'+ichr+'.npy', vars()['geneStart'+ichr])
+		#np.save(wdvars+'HiC/general/geneMatrix'+ichr+'.npy', vars()['geneMatrix'+ichr])
+		#np.save(wdvars+'HiC/general/peakStart'+ichr+'.npy', vars()['peakStart'+ichr])
+		#np.save(wdvars+'HiC/general/peakMatrix'+ichr+'.npy', vars()['peakMatrix'+ichr])
+		#np.save(wdvars+'HiC/'+subtypeName+'/hic'+ichr+'.npy', vars()['hic'+subtype+ichr])
 
-		np.save(wdvars+'ATAC/atac'+ichr+'.npy', vars()['activity'+ichr])
-		np.save(wdvars+'ATAC/chrATAC'+ichr+'.npy', vars()['chrActivity'+ichr])
-		np.save(wdvars+'ATAC/peakName'+ichr+'.npy', vars()['peakName'+ichr])
-		np.save(wdvars+'ATAC/positionATAC'+ichr+'.npy', vars()['positionActivity'+ichr])
-		vars()['activity'+subtype+ichr] = np.mean( vars()['activity'+ichr][typesIndex==itype], axis=0)
-		np.save(wdvars+'ATAC/atac'+subtype+ichr+'.npy', vars()['activity'+subtype+ichr])
+		#np.save(wdvars+'ATAC/atac'+ichr+'.npy', vars()['activity'+ichr])
+		#np.save(wdvars+'ATAC/chrATAC'+ichr+'.npy', vars()['chrActivity'+ichr])
+		#np.save(wdvars+'ATAC/peakName'+ichr+'.npy', vars()['peakName'+ichr])
+		#np.save(wdvars+'ATAC/positionATAC'+ichr+'.npy', vars()['positionActivity'+ichr])
+		#vars()['activity'+subtype+ichr] = np.mean( vars()['activity'+ichr][typesIndex==itype], axis=0)
+		#np.save(wdvars+'ATAC/atac'+subtype+ichr+'.npy', vars()['activity'+subtype+ichr])
 
-		np.save(wdvars+'RNA/expression'+ichr+'.npy', vars()['expression'+ichr])
-		np.save(wdvars+'RNA/geneName'+ichr+'.npy', vars()['geneName'+ichr])
-		np.save(wdvars+'RNA/chrRNA'+ichr+'.npy', vars()['chrRNA'+ichr])
-		np.save(wdvars+'RNA/positionRNA'+ichr+'.npy', vars()['positionRNA'+ichr])
-		np.save(wdvars+'RNA/direction'+ichr+'.npy', vars()['direction'+ichr])
+		#np.save(wdvars+'RNA/expression'+ichr+'.npy', vars()['expression'+ichr])
+		#np.save(wdvars+'RNA/geneName'+ichr+'.npy', vars()['geneName'+ichr])
+		np.save(wdvars+'RNA/geneID'+ichr+'.npy', vars()['geneID'+ichr])
+		#np.save(wdvars+'RNA/chrRNA'+ichr+'.npy', vars()['chrRNA'+ichr])
+		#np.save(wdvars+'RNA/positionRNA'+ichr+'.npy', vars()['positionRNA'+ichr])
+		#np.save(wdvars+'RNA/direction'+ichr+'.npy', vars()['direction'+ichr])
+	exit()
 			
 ###################################################################
 # Create ABC Matrix
