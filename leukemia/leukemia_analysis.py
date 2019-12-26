@@ -116,47 +116,102 @@ for itype in range(len(subtypes)):
 ###################################################################
 # Differential Genes
 ###################################################################
+chrOrder = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,'X','Y','M'])
+
 for itype in range(len(subtypes)):
 	subtype = typeNames[itype]
 	subtypeName = subtypes[itype]
-	print('differential genes: '+subtypeName)
+	print('Differential Genes: '+subtypeName)
 
-	vars()['difFile'+subtype] = pd.read_csv(wddata+'differential_genes/'+subtypeName+'_significant_genes.txt', sep = '\t', header=0)
-	vars()['difGeneID'+subtype] = vars()['difFile'+subtype]['genes']
-	vars()['difP'+subtype] = vars()['difFile'+subtype]['p']
-	vars()['difFC'+subtype] = vars()['difFile'+subtype]['logFC']
-	vars()['difGeneName'+subtype] = np.zeros( shape=len(vars()['difGeneID'+subtype]), dtype=object)
-	vars()['difChr'+subtype] = np.zeros( shape=len(vars()['difGeneID'+subtype]), dtype=object)
+	vars()['difGenes'+subtype] = pd.read_csv(wddata+'differential_genes/'+subtypeName+'_significant_genes.txt', sep = '\t', header=0)
+	vars()['difGenes'+subtype]['geneID']=vars()['difGenes'+subtype]['genes']
+	del vars()['difGenes'+subtype]['genes']
+	vars()['difGenes'+subtype]['geneName'] = np.zeros( shape=len(vars()['difGenes'+subtype]), dtype=object)
+	vars()['difGenes'+subtype]['chr'] = np.zeros( shape=len(vars()['difGenes'+subtype]), dtype=object)
 
 	for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','X']:
 
-		genesIndex = np.isin(vars()['difGeneID'+subtype], vars()['geneID'+ichr])
+		genesIndex = np.isin(vars()['difGenes'+subtype]['geneID'], vars()['geneID'+ichr])
 
 		for igene in range(sum(genesIndex)):
 			geneIndexDif = np.where(genesIndex)[0][igene]
-			geneID = vars()['difGeneID'+subtype][geneIndexDif]
+			geneID = vars()['difGenes'+subtype]['geneID'][geneIndexDif]
 			geneIndexRNA = np.where( vars()['geneID'+ichr]==geneID )[0][0]
-			print 'chr'+ichr, igene, geneIndexDif, geneIndexRNA, geneID
-			vars()['difGeneName'+subtype][geneIndexDif] = vars()['geneName'+ichr][geneIndexRNA]
-			vars()['difChr'+subtype][geneIndexDif] = ichr
+			vars()['difGenes'+subtype]['geneName'][geneIndexDif] = vars()['geneName'+ichr][geneIndexRNA]
+			vars()['difGenes'+subtype]['chr'][geneIndexDif] = ichr
 
-	mask = vars()['difGeneName'+subtype]==0
-	vars()['difGeneID'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difGeneID'+subtype], mask))
-	vars()['difGeneName'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difGeneName'+subtype], mask))
-	vars()['difP'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difP'+subtype], mask))
-	vars()['difFC'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difFC'+subtype], mask))
-	vars()['difChr'+subtype] = np.ma.compressed(np.ma.masked_array(vars()['difChr'+subtype], mask))
+	mask = vars()['difGenes'+subtype]['geneName']!=0
+	vars()['difGenes'+subtype] = vars()['difGenes'+subtype][mask].reset_index(drop=True)
+	del vars()['difGenes'+subtype]['index']
 
+	# Peaks
+	vars()['difPeaks'+subtype] = pd.read_csv(wddata+'differential_genes/differential_peaks_'+subtypeName+'.txt', sep = '\t', header=0)
+	del vars()['difPeaks'+subtype]['index']
+	del vars()['difPeaks'+subtype]['Unnamed: 0']
+	mask = vars()['difPeaks'+subtype]['convert']>0
+	vars()['difPeaks'+subtype] = vars()['difPeaks'+subtype][mask].reset_index(drop=True)
 
+###################################################################
+# ABC between differential genes and peaks
+###################################################################
+abcCutoff = np.load(wdvars+'validation_K562/PrecisionRecall/atacContactConnected.npy')
+abcPrecision = np.load(wdvars+'validation_K562/PrecisionRecall/precisionAtacContact.npy')
+abcRecall = np.load(wdvars+'validation_K562/PrecisionRecall/recallAtacContact.npy')
 
+difPeakGene = pd.DataFrame(columns=['subtype','chr','geneName','igene','geneP','geneLogFC','peakName','ipeak','peakP','peakLogFC','ABCscore'])
 
+# small fix
+abcHyperdiploid16[46,417] = 0.18537948
 
+print('\n')
+for itype in range(len(subtypes)):
+	subtype = typeNames[itype]
+	subtypeName = subtypes[itype]
+	print('ABC analysis: '+subtypeName)
 
+	for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','X']:
+		vars()['difPeakGene'+subtype+ichr] = np.zeros(shape=vars()['abc'+subtype+ichr].shape, dtype=bool)
 
+		genes = np.array(vars()['difGenes'+subtype]['geneName'][vars()['difGenes'+subtype]['chr']==ichr],dtype=object)
+		geneIndices = np.where(np.isin(vars()['geneName'+ichr], genes))[0]
 
+		peakIndices = np.unique(np.array(vars()['difPeaks'+subtype]['convert'][vars()['difPeaks'+subtype]['chr']=='chr'+ichr], dtype=int))
 
+		for igene in range(len(geneIndices)):
+			vars()['difPeakGene'+subtype+ichr][geneIndices[igene],peakIndices] = 1
 
+		# at abc > 0.32, precision = 0.25 and recall = 0.10
+		# at abc > 0.11, precision = 0.14 and recall = 0.40
+		abcConnections = vars()['abc'+subtype+ichr][vars()['difPeakGene'+subtype+ichr]][vars()['abc'+subtype+ichr][vars()['difPeakGene'+subtype+ichr]]>0]
+		if np.sum(abcConnections>0.11)>0:
+			abcSig = abcConnections[abcConnections>0.11]
+			for i in range(len(abcSig)):
+				igene = np.where(vars()['abc'+subtype+ichr]==abcSig[i])[0][0]
+				ipeak = np.where(vars()['abc'+subtype+ichr]==abcSig[i])[1][0]
+				geneName = vars()['geneName'+ichr][igene]
+				peakName = vars()['peakName'+ichr][ipeak]
 
+				# retrieve peak and gene differential info
+				geneIndex = np.where(vars()['difGenes'+subtype]['geneName']==geneName)[0][0]
+				geneP = vars()['difGenes'+subtype]['p'][geneIndex]
+				geneLogFC = vars()['difGenes'+subtype]['logFC'][geneIndex]
+
+				peakTable = vars()['difPeaks'+subtype][vars()['difPeaks'+subtype]['chr']=='chr'+ichr].reset_index(drop=True)
+				peakIndex = np.where(peakTable['convert']==ipeak)[0]
+				peakP = np.amin(peakTable['padj'][peakIndex])
+				peakLogFC = np.amax(peakTable['log2FoldChange'][peakIndex])
+
+				difPeakGene = difPeakGene.append({'subtype':subtype,
+									'chr':'chr'+ichr, 
+									'geneName':geneName, 
+									'igene':igene,  
+									'geneP':geneP,  
+									'geneLogFC':geneLogFC,  
+									'peakName':peakName, 
+									'ipeak':ipeak, 
+									'peakP':geneP,  
+									'peakLogFC':geneLogFC,  
+									'ABCscore':abcSig[i]},ignore_index=True)
 
 
 

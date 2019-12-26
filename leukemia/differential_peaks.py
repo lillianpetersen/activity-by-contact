@@ -105,7 +105,7 @@ for itype in range(len(subtypes)):
 		print(subtype+' Chromosome '+ichr+': '+str(int(100*np.round( len(vars()['peakIndex'+ichr][vars()['peakIndex'+ichr]>-1])/float(len(np.unique(vars()['peakPos'+ichr][0]))),2)))+' % match out of'+str(len(np.unique(vars()['peakPos'+ichr][0])))+' peaks')
 		vars()['difPeaks'+subtype]['convert'][vars()['difPeaks'+subtype]['chr']=='chr'+ichr] = vars()['peakIndex'+ichr]
 
-	vars()['difPeaks'+subtype].to_csv(wdvars+'differential_peaks_'+subtypeName+'.txt', sep = '\t', header=True)
+	vars()['difPeaks'+subtype].to_csv(wddata+'differential_genes/differential_peaks_'+subtypeName+'.txt', sep = '\t', header=True)
 
 
 
