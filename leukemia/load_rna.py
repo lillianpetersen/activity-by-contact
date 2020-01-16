@@ -177,13 +177,13 @@ for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','
 	vars()['positionRNA'+ichr] = vars()['positionRNA'+ichr][:,sortIndexPos]
 	vars()['nGenes'+ichr] = vars()['expression'+ichr].shape[1]
 	
-	#np.save(wdvars+'RNA/expression'+ichr+'.npy', vars()['expression'+ichr])
-	#np.save(wdvars+'RNA/geneName'+ichr+'.npy', vars()['geneName'+ichr])
-	#np.save(wdvars+'RNA/geneID'+ichr+'.npy', vars()['geneID'+ichr])
-	#np.save(wdvars+'RNA/chrRNA'+ichr+'.npy', vars()['chrRNA'+ichr])
-	#np.save(wdvars+'RNA/positionRNA'+ichr+'.npy', vars()['positionRNA'+ichr])
-	#np.save(wdvars+'RNA/nGenes'+ichr+'.npy', vars()['nGenes'+ichr])
-	#np.save(wdvars+'RNA/direction'+ichr+'.npy', vars()['direction'+ichr])
+	np.save(wdvars+'RNA/expression'+ichr+'.npy', vars()['expression'+ichr])
+	np.save(wdvars+'RNA/geneName'+ichr+'.npy', vars()['geneName'+ichr])
+	np.save(wdvars+'RNA/geneID'+ichr+'.npy', vars()['geneID'+ichr])
+	np.save(wdvars+'RNA/chrRNA'+ichr+'.npy', vars()['chrRNA'+ichr])
+	np.save(wdvars+'RNA/positionRNA'+ichr+'.npy', vars()['positionRNA'+ichr])
+	np.save(wdvars+'RNA/nGenes'+ichr+'.npy', vars()['nGenes'+ichr])
+	np.save(wdvars+'RNA/direction'+ichr+'.npy', vars()['direction'+ichr])
 
 ############################
 

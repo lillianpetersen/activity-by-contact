@@ -14,6 +14,10 @@ from sklearn.model_selection import train_test_split
 import sklearn.linear_model
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+import numpy as np 
+import statsmodels.api as sm 
+import pylab as py 
+import statsmodels.stats.multitest as multitest
 
 wd = '/pbld/mcg/lillianpetersen/ABC/'
 wdvars = '/pbld/mcg/lillianpetersen/ABC/saved_variables/'
@@ -27,8 +31,15 @@ MCGs = ['MCG001', 'MCG002', 'MCG003', 'MCG005', 'MCG006', 'MCG009', 'MCG010', 'M
 nSamples = len(MCGs)
 nChr = 23
 
-subtypes = np.array(['ETV6-RUNX1', 'DUX4', 'Hyperdiploid', 'PAX5', 'Ph-like'])
+subtypes = np.array(['ETV6-RUNX1', 'DUX4', 'Hyperdiploid', 'PAX5alt', 'Ph-like'])
 typeNames = np.array(['ETVRUNX', 'DUX', 'Hyperdiploid', 'PAX', 'Phlike'])
+
+subtypeToCompact = {
+	'ETV6-RUNX1':'ETVRUNX',
+	'DUX4':'DUX',
+	'Hyperdiploid':'Hyperdiploid',
+	'PAX5alt':'PAX',
+	'Ph-like':'Phlike'}
 
 sampleTypes = np.array(['PAX5', 'ETV6-RUNX1', 'PAX5alt', 'DUX4', 'ZNF384', 'PAX5alt', 'Hyperdiploid', 'DUX4', 'Hyperdiploid', 'Ph-like', 'Ph-like', 'ETV6-RUNX1', 'Hyperdiploid', 'Hyperdiploid', 'DUX4', 'ETV6-RUNX1', 'Hyperdiploid', 'Hyperdiploid', 'Hyperdiploid', 'ETV6-RUNX1', 'DUX4', 'Other', 'Ph-like', 'Ph-like'])
 # 0=ETV6-RUNX1, 1=DUX4, 2=Hyperdiploid, 3=PAX5, 4=Ph-like, 5=Other
@@ -77,6 +88,10 @@ for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','
 		vars()['chrRNA'+ichr] = np.load(wdvars+'RNA/chrRNA'+ichr+'.npy')
 		vars()['positionRNA'+ichr] = np.load(wdvars+'RNA/positionRNA'+ichr+'.npy')
 		vars()['direction'+ichr] = np.load(wdvars+'RNA/direction'+ichr+'.npy')
+
+		for itype in range(len(subtypes)):
+			subtype = typeNames[itype]
+			vars()['expression'+subtype+ichr] = np.load(wdvars+'RNA/expression'+subtype+ichr+'.npy')
 
 ###################################################################
 # Load Activity
@@ -142,12 +157,9 @@ for itype in range(len(subtypes)):
 
 	mask = vars()['difGenes'+subtype]['geneName']!=0
 	vars()['difGenes'+subtype] = vars()['difGenes'+subtype][mask].reset_index(drop=True)
-	del vars()['difGenes'+subtype]['index']
 
 	# Peaks
 	vars()['difPeaks'+subtype] = pd.read_csv(wddata+'differential_genes/differential_peaks_'+subtypeName+'.txt', sep = '\t', header=0)
-	del vars()['difPeaks'+subtype]['index']
-	del vars()['difPeaks'+subtype]['Unnamed: 0']
 	mask = vars()['difPeaks'+subtype]['convert']>0
 	vars()['difPeaks'+subtype] = vars()['difPeaks'+subtype][mask].reset_index(drop=True)
 
@@ -162,6 +174,9 @@ difPeakGene = pd.DataFrame(columns=['subtype','chr','geneName','igene','geneP','
 
 # small fix
 abcHyperdiploid16[46,417] = 0.18537948
+abcHyperdiploid2[325,11777] = 0.07757214
+abcHyperdiploid10[145,6927] = 0.0737588
+abcHyperdiploid19[592,6894] = 0.0852113
 
 print('\n')
 for itype in range(len(subtypes)):
@@ -182,9 +197,10 @@ for itype in range(len(subtypes)):
 
 		# at abc > 0.32, precision = 0.25 and recall = 0.10
 		# at abc > 0.11, precision = 0.14 and recall = 0.40
+		# at abc > 0.07, precision = 0.10 and recall = 0.50
 		abcConnections = vars()['abc'+subtype+ichr][vars()['difPeakGene'+subtype+ichr]][vars()['abc'+subtype+ichr][vars()['difPeakGene'+subtype+ichr]]>0]
-		if np.sum(abcConnections>0.11)>0:
-			abcSig = abcConnections[abcConnections>0.11]
+		if np.sum(abcConnections>0.07)>0:
+			abcSig = abcConnections[abcConnections>0.07]
 			for i in range(len(abcSig)):
 				igene = np.where(vars()['abc'+subtype+ichr]==abcSig[i])[0][0]
 				ipeak = np.where(vars()['abc'+subtype+ichr]==abcSig[i])[1][0]
@@ -201,8 +217,8 @@ for itype in range(len(subtypes)):
 				peakP = np.amin(peakTable['padj'][peakIndex])
 				peakLogFC = np.amax(peakTable['log2FoldChange'][peakIndex])
 
-				difPeakGene = difPeakGene.append({'subtype':subtype,
-									'chr':'chr'+ichr, 
+				difPeakGene = difPeakGene.append({'subtype':subtypeName,
+									'chr':ichr, 
 									'geneName':geneName, 
 									'igene':igene,  
 									'geneP':geneP,  
@@ -212,6 +228,97 @@ for itype in range(len(subtypes)):
 									'peakP':geneP,  
 									'peakLogFC':geneLogFC,  
 									'ABCscore':abcSig[i]},ignore_index=True)
+
+
+difPeakGene.to_csv(wdfiles+'differential_peak_gene_connections.tsv', sep='\t', header=True, index=False)
+
+
+###################################################################
+# Plot differential peak/genes across subtypes
+###################################################################
+print '\n Identify Cancer Genes and Kinases, and Make Plots'
+
+cancerGenes = pd.read_csv(wddata+'COSMIC_cancer_genes.tsv', header=0, sep='\t')
+tissue_type = cancerGenes['Tissue Type']
+tissue_type = tissue_type.str.split(',', expand=True)
+leuk = np.sum(tissue_type=='L',axis=1).astype(bool)
+cancerGenes = cancerGenes[leuk].reset_index(drop=True)
+
+geneCategories = pd.read_csv(wddata+'gene_categories.tsv', header=0, sep='\t')
+geneCategories['category'] = geneCategories['category'].str.title()
+
+abcdata = np.zeros(shape=(len(difPeakGene),5))
+expressiondata = np.zeros(shape=(len(difPeakGene),5))
+
+corr = np.zeros(shape=len(difPeakGene))
+p = np.zeros(shape=len(difPeakGene))
+geneCategory = np.zeros(shape=len(difPeakGene),dtype='object')
+
+## Find Corr and P Value
+for iline in range(len(difPeakGene)):
+    line = difPeakGene.loc[[iline]].reset_index(drop=True)
+
+    subtype = subtypeToCompact[line['subtype'][0]]
+    ichr = line['chr'][0]
+    geneName = line['geneName'][0]
+    igene = line['igene'][0]
+    peakName = line['peakName'][0]
+    ipeak = line['ipeak'][0]
+
+    for itype in range(len(typeNames)):
+        abcdata[iline,itype] = vars()['abc'+typeNames[itype]+ichr][igene,ipeak]
+        expressiondata[iline,itype] = vars()['expression'+typeNames[itype]+ichr][igene]
+
+    corr[iline], p[iline] = stats.pearsonr(abcdata[iline],expressiondata[iline])
+    corr[iline] = np.round(corr[iline],2)
+
+## Correct P Value
+pBool, pCorrected, tmp, tmp2 = multitest.multipletests(p, alpha=0.05, method='fdr_bh')
+
+## Make Plots
+for iline in range(len(difPeakGene)):
+    line = difPeakGene.loc[[iline]].reset_index(drop=True)
+
+    subtype = subtypeToCompact[line['subtype'][0]]
+    ichr = line['chr'][0]
+    geneName = line['geneName'][0]
+    igene = line['igene'][0]
+    peakName = line['peakName'][0]
+    ipeak = line['ipeak'][0]
+
+    IsCancerGene = np.amax(np.isin(cancerGenes['Gene Symbol'], geneName))
+    HasCategory = np.amax(np.isin(geneCategories['entrez_gene_symbol'], geneName))
+    if HasCategory:
+        index = np.where(np.isin(geneCategories['entrez_gene_symbol'], geneName))[0][0]
+        geneCategory[iline] = geneCategories['category'][index]
+
+    ## Plot
+    plt.clf()
+    fig = plt.figure(figsize=(10,8))
+    ax = fig.add_subplot(1,1,1)
+    ax.scatter(abcdata[iline],expressiondata[iline],color='b',s=150)
+    for i,txt in enumerate(subtypes):
+        ax.annotate(txt,(abcdata[iline,i],expressiondata[iline,i]),fontsize=14)
+    plt.grid(True)
+    ax.set_xlabel('ABC')
+    ax.set_ylabel('Gene Expression')
+
+    if IsCancerGene:
+        plt.title(geneName + ' (Leukemia Oncogene) with Peak '+peakName+'\n Corr = '+str(corr[iline])+', P = '+np.format_float_scientific(pCorrected[iline],precision=2),fontsize=18)
+    elif HasCategory:
+        plt.title(geneName + ' ('+geneCategory[iline]+') with Peak '+peakName+'\n Corr = '+str(corr[iline])+', P = '+np.format_float_scientific(pCorrected[iline],precision=2),fontsize=18)
+    else:
+        plt.title(geneName + ' with Peak '+peakName+'\n Corr = '+str(corr[iline])+', P = '+np.format_float_scientific(pCorrected[iline],precision=2),fontsize=18)
+
+    if IsCancerGene:
+        plt.savefig(wdfigs+'leukemia/differential_peakgenes/cancer_genes/'+subtype+'_'+str(corr[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+    elif HasCategory and pCorrected[iline]<0.15:
+        plt.savefig(wdfigs+'leukemia/differential_peakgenes/gene_categories/'+subtype+'_'+str(corr[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+    elif pCorrected[iline]<0.15:
+        plt.savefig(wdfigs+'leukemia/differential_peakgenes/no_cancer_high_p/'+subtype+'_'+str(corr[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+    else:
+        plt.savefig(wdfigs+'leukemia/differential_peakgenes/other/'+subtype+'_'+str(corr[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+
 
 
 

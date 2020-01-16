@@ -26,7 +26,7 @@ MCGs = ['MCG001', 'MCG002', 'MCG003', 'MCG005', 'MCG006', 'MCG009', 'MCG010', 'M
 nSamples = len(MCGs)
 nChr = 23
 
-subtypes = np.array(['ETV6-RUNX1', 'DUX4', 'Hyperdiploid', 'PAX5', 'Ph-like'])
+subtypes = np.array(['ETV6-RUNX1', 'DUX4', 'Hyperdiploid', 'PAX5alt', 'Ph-like'])
 typeNames = np.array(['ETVRUNX', 'DUX', 'Hyperdiploid', 'PAX', 'Phlike'])
 
 sampleTypes = np.array(['PAX5', 'ETV6-RUNX1', 'PAX5alt', 'DUX4', 'ZNF384', 'PAX5alt', 'Hyperdiploid', 'DUX4', 'Hyperdiploid', 'Ph-like', 'Ph-like', 'ETV6-RUNX1', 'Hyperdiploid', 'Hyperdiploid', 'DUX4', 'ETV6-RUNX1', 'Hyperdiploid', 'Hyperdiploid', 'Hyperdiploid', 'ETV6-RUNX1', 'DUX4', 'Other', 'Ph-like', 'Ph-like'])
@@ -73,7 +73,7 @@ for itype in range(len(subtypes)):
 	p = genesFile['p']
 
 	pMask = p<0.05
-	sigGenes = genesFile[pMask].reset_index()
+	sigGenes = genesFile[pMask].reset_index(drop=True)
 
 	sigGenes.to_csv(wddata+'differential_genes/'+subtypeName+'_significant_genes.txt', sep = '\t', header=True, index=False)
 

@@ -27,7 +27,7 @@ MCGs = ['MCG001', 'MCG002', 'MCG003', 'MCG005', 'MCG006', 'MCG009', 'MCG010', 'M
 nSamples = len(MCGs)
 nChr = 23
 
-subtypes = np.array(['ETV6-RUNX1', 'DUX4', 'Hyperdiploid', 'PAX5', 'Ph-like'])
+subtypes = np.array(['ETV6-RUNX1', 'DUX4', 'Hyperdiploid', 'PAX5alt', 'Ph-like'])
 typeNames = np.array(['ETVRUNX', 'DUX', 'Hyperdiploid', 'PAX', 'Phlike'])
 typeNamesFile = np.array(['ETV6_RUNX1', 'DUX4', 'High_hyperdiploid', 'PAX5alt', 'Ph_like'])
 
@@ -74,7 +74,7 @@ for itype in range(len(subtypes)):
 	subtypeName = subtypes[itype]
 	print('\n\n\n'+'Differential Peaks: '+subtypeName)
 
-	vars()['difPeaks'+subtype] = difPeaksSig[difPeaksSig['label']==typeNamesFile[itype]].reset_index()
+	vars()['difPeaks'+subtype] = difPeaksSig[difPeaksSig['label']==typeNamesFile[itype]].reset_index(drop=True)
 
 	vars()['difPeaks'+subtype]['chr'] = vars()['difPeaks'+subtype]['peakID'].str.split('_').str.get(0)
 	vars()['difPeaks'+subtype]['start'] = vars()['difPeaks'+subtype]['peakID'].str.split('_').str.get(1)
@@ -105,7 +105,7 @@ for itype in range(len(subtypes)):
 		print(subtype+' Chromosome '+ichr+': '+str(int(100*np.round( len(vars()['peakIndex'+ichr][vars()['peakIndex'+ichr]>-1])/float(len(np.unique(vars()['peakPos'+ichr][0]))),2)))+' % match out of'+str(len(np.unique(vars()['peakPos'+ichr][0])))+' peaks')
 		vars()['difPeaks'+subtype]['convert'][vars()['difPeaks'+subtype]['chr']=='chr'+ichr] = vars()['peakIndex'+ichr]
 
-	vars()['difPeaks'+subtype].to_csv(wddata+'differential_genes/differential_peaks_'+subtypeName+'.txt', sep = '\t', header=True)
+	vars()['difPeaks'+subtype].to_csv(wddata+'differential_genes/differential_peaks_'+subtypeName+'.txt', sep = '\t', header=True, index=False)
 
 
 
