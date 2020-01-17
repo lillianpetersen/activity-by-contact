@@ -252,78 +252,118 @@ expressiondata = np.zeros(shape=(len(difPeakGene),5))
 
 corr = np.zeros(shape=len(difPeakGene))
 p = np.zeros(shape=len(difPeakGene))
-geneCategory = np.zeros(shape=len(difPeakGene),dtype='object')
+geneP = np.zeros(shape=len(difPeakGene))
+geneCategory = np.zeros(shape=len(difPeakGene),dtype=object)
+cancerGene = np.zeros(shape=len(difPeakGene),dtype=bool)
 
 ## Find Corr and P Value
 for iline in range(len(difPeakGene)):
-    line = difPeakGene.loc[[iline]].reset_index(drop=True)
+	line = difPeakGene.loc[[iline]].reset_index(drop=True)
 
-    subtype = subtypeToCompact[line['subtype'][0]]
-    ichr = line['chr'][0]
-    geneName = line['geneName'][0]
-    igene = line['igene'][0]
-    peakName = line['peakName'][0]
-    ipeak = line['ipeak'][0]
+	subtype = subtypeToCompact[line['subtype'][0]]
+	ichr = line['chr'][0]
+	geneName = line['geneName'][0]
+	igene = line['igene'][0]
+	peakName = line['peakName'][0]
+	ipeak = line['ipeak'][0]
+	geneP[iline] = line['geneP'][0]
 
-    for itype in range(len(typeNames)):
-        abcdata[iline,itype] = vars()['abc'+typeNames[itype]+ichr][igene,ipeak]
-        expressiondata[iline,itype] = vars()['expression'+typeNames[itype]+ichr][igene]
+	for itype in range(len(typeNames)):
+		abcdata[iline,itype] = vars()['abc'+typeNames[itype]+ichr][igene,ipeak]
+		expressiondata[iline,itype] = vars()['expression'+typeNames[itype]+ichr][igene]
 
-    corr[iline], p[iline] = stats.pearsonr(abcdata[iline],expressiondata[iline])
-    corr[iline] = np.round(corr[iline],2)
+	corr[iline], p[iline] = stats.pearsonr(abcdata[iline],expressiondata[iline])
 
 ## Correct P Value
 pBool, pCorrected, tmp, tmp2 = multitest.multipletests(p, alpha=0.05, method='fdr_bh')
 
 ## Make Plots
 for iline in range(len(difPeakGene)):
-    line = difPeakGene.loc[[iline]].reset_index(drop=True)
+	line = difPeakGene.loc[[iline]].reset_index(drop=True)
 
-    subtype = subtypeToCompact[line['subtype'][0]]
-    ichr = line['chr'][0]
-    geneName = line['geneName'][0]
-    igene = line['igene'][0]
-    peakName = line['peakName'][0]
-    ipeak = line['ipeak'][0]
+	subtype = subtypeToCompact[line['subtype'][0]]
+	ichr = line['chr'][0]
+	geneName = line['geneName'][0]
+	igene = line['igene'][0]
+	peakName = line['peakName'][0]
+	ipeak = line['ipeak'][0]
 
-    IsCancerGene = np.amax(np.isin(cancerGenes['Gene Symbol'], geneName))
-    HasCategory = np.amax(np.isin(geneCategories['entrez_gene_symbol'], geneName))
-    if HasCategory:
-        index = np.where(np.isin(geneCategories['entrez_gene_symbol'], geneName))[0][0]
-        geneCategory[iline] = geneCategories['category'][index]
+	cancerGene[iline] = np.amax(np.isin(cancerGenes['Gene Symbol'], geneName))
+	HasCategory = np.amax(np.isin(geneCategories['entrez_gene_symbol'], geneName))
+	if HasCategory:
+		index = np.where(np.isin(geneCategories['entrez_gene_symbol'], geneName))[0][0]
+		geneCategory[iline] = geneCategories['category'][index]
+	
+	#whichDif = np.where(subtype==typeNames)[0][0]
+	#exit()
 
-    ## Plot
-    plt.clf()
-    fig = plt.figure(figsize=(10,8))
-    ax = fig.add_subplot(1,1,1)
-    ax.scatter(abcdata[iline],expressiondata[iline],color='b',s=150)
-    for i,txt in enumerate(subtypes):
-        ax.annotate(txt,(abcdata[iline,i],expressiondata[iline,i]),fontsize=14)
-    plt.grid(True)
-    ax.set_xlabel('ABC')
-    ax.set_ylabel('Gene Expression')
+	if MakePlots:
+		corrPrint[iline] = np.round(corr[iline],2)
 
-    if IsCancerGene:
-        plt.title(geneName + ' (Leukemia Oncogene) with Peak '+peakName+'\n Corr = '+str(corr[iline])+', P = '+np.format_float_scientific(pCorrected[iline],precision=2),fontsize=18)
-    elif HasCategory:
-        plt.title(geneName + ' ('+geneCategory[iline]+') with Peak '+peakName+'\n Corr = '+str(corr[iline])+', P = '+np.format_float_scientific(pCorrected[iline],precision=2),fontsize=18)
-    else:
-        plt.title(geneName + ' with Peak '+peakName+'\n Corr = '+str(corr[iline])+', P = '+np.format_float_scientific(pCorrected[iline],precision=2),fontsize=18)
+		## Plot
+		plt.clf()
+		fig = plt.figure(figsize=(10,8))
+		ax = fig.add_subplot(1,1,1)
+		ax.scatter(abcdata[iline],expressiondata[iline],color='b',s=150)
+		for i,txt in enumerate(subtypes):
+			ax.annotate(txt,(abcdata[iline,i],expressiondata[iline,i]),fontsize=14)
+		plt.grid(True)
+		ax.set_xlabel('ABC')
+		ax.set_ylabel('Gene Expression')
+	
+		if cancerGene[iline]:
+			plt.title(geneName + ' (Leukemia Oncogene) with Peak '+peakName+'\n Corr = '+str(corrPrint[iline])+', P = '+np.format_float_scientific(p[iline],precision=2),fontsize=18)
+		elif HasCategory:
+			plt.title(geneName + ' ('+geneCategory[iline]+') with Peak '+peakName+'\n Corr = '+str(corrPrint[iline])+', P = '+np.format_float_scientific(p[iline],precision=2),fontsize=18)
+		else:
+			plt.title(geneName + ' with Peak '+peakName+'\n Corr = '+str(corrPrint[iline])+', P = '+np.format_float_scientific(p[iline],precision=2),fontsize=18)
+	
+		if cancerGene[iline]:
+			plt.savefig(wdfigs+'leukemia/differential_peakgenes/cancer_genes/'+subtype+'_'+str(corrPrint[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+		elif HasCategory and p[iline]<0.05:
+			plt.savefig(wdfigs+'leukemia/differential_peakgenes/gene_categories/'+subtype+'_'+str(corrPrint[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+		elif p[iline]<0.05:
+			plt.savefig(wdfigs+'leukemia/differential_peakgenes/no_cancer_high_p/'+subtype+'_'+str(corrPrint[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+		else:
+			plt.savefig(wdfigs+'leukemia/differential_peakgenes/other/'+subtype+'_'+str(corrPrint[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
 
-    if IsCancerGene:
-        plt.savefig(wdfigs+'leukemia/differential_peakgenes/cancer_genes/'+subtype+'_'+str(corr[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
-    elif HasCategory and pCorrected[iline]<0.15:
-        plt.savefig(wdfigs+'leukemia/differential_peakgenes/gene_categories/'+subtype+'_'+str(corr[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
-    elif pCorrected[iline]<0.15:
-        plt.savefig(wdfigs+'leukemia/differential_peakgenes/no_cancer_high_p/'+subtype+'_'+str(corr[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
-    else:
-        plt.savefig(wdfigs+'leukemia/differential_peakgenes/other/'+subtype+'_'+str(corr[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
 
 
+###### Make a QQ Plot ######
+# divide the diff gene p values into high and low corr (corr from ABC and expression)
+geneP_highcorr = geneP[np.abs(corr)>0.85]
+geneP_lowcorr = geneP[np.abs(corr)<0.6]
 
+# calculate -log10(observed p) for high corr (qp stands for "p value for qq plot")
+qp_high = -1*np.log10(np.sort(geneP_highcorr))
+# calculate -log10(expectetd p) for high corr
+qpExpected_high = np.arange(0.01,1.01,1./len(qp_high))
+qpExpected_high = -1*np.log10(qpExpected_high)
 
+# calculate -log10(observed p) for low corr
+qp_low = -1*np.log10(np.sort(geneP_lowcorr))
+# calculate -log10(expectetd p) for low corr
+qpExpected_low = np.arange(0.01,1.01,1./len(qp_low))
+qpExpected_low = -1*np.log10(qpExpected_low)
 
+# the maximum qp (for plotting)
+maxqp = np.amax(qpExpected_low)
 
+# make the qq plot
+plt.clf()
+plt.plot(qpExpected_low, qp_low, 'b.', markersize=15, mec='k', mew=1, label='Good Corr')
+plt.plot(qpExpected_high, qp_high, 'g.', markersize=15, mec='k', mew=1, label='Low Corr')
+# plot line
+plt.plot([0,maxqp],[0,maxqp],'r-')
+plt.grid(True)
+plt.axis('equal')
+plt.ylim([0,maxqp])
+plt.xlim([0,maxqp])
+plt.title('QQ Plot of P Values of Differential Genes',fontsize=15)
+plt.ylabel('-log10(observed p)',fontsize=13)
+plt.xlabel('-log10(expected p)',fontsize=13)
+plt.legend(loc='lower right')
+plt.savefig(wdfigs+'leukemia/qq_plot_of_p_values_of_diff_genes.pdf')
 
 
 
