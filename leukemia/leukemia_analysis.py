@@ -206,7 +206,7 @@ for itype in range(len(subtypes)):
 		# at abc > 0.07, precision = 0.10 and recall = 0.50
 		abcConnections = vars()['abc'+subtype+ichr][vars()['difPeakGene'+subtype+ichr]][vars()['abc'+subtype+ichr][vars()['difPeakGene'+subtype+ichr]]>0]
 		if np.sum(abcConnections>0.07)>0:
-			abcSig = abcConnections[abcConnections>0.07]
+			abcSig = abcConnections[abcConnections>0.05]
 			for i in range(len(abcSig)):
 				igene = np.where(vars()['abc'+subtype+ichr]==abcSig[i])[0][0]
 				ipeak = np.where(vars()['abc'+subtype+ichr]==abcSig[i])[1][0]
@@ -336,8 +336,9 @@ for iline in range(len(difPeakGene)):
 
 
 ###### Make a QQ Plot ######
+'''
 # divide the diff gene p values into high and low corr (corr from ABC and expression)
-geneP_highcorr = geneP[np.abs(corr)>0.85]
+geneP_corr = geneP[np.abs(corr)>0.85]
 geneP_lowcorr = geneP[np.abs(corr)<0.6]
 
 # calculate -log10(observed p) for high corr (qp stands for "p value for qq plot")
@@ -348,18 +349,15 @@ qpExpected_high = -1*np.log10(qpExpected_high)
 
 # calculate -log10(observed p) for low corr
 qp_low = -1*np.log10(np.sort(geneP_lowcorr))
-# calculate -log10(expectetd p) for low corr
 qpExpected_low = np.arange(0.01,1.01,1./len(qp_low))
 qpExpected_low = -1*np.log10(qpExpected_low)
 
-# the maximum qp (for plotting)
 maxqp = np.amax(qpExpected_low)
 
 # make the qq plot
 plt.clf()
 plt.plot(qpExpected_low, qp_low, 'b.', markersize=15, mec='k', mew=1, label='Good Corr')
 plt.plot(qpExpected_high, qp_high, 'g.', markersize=15, mec='k', mew=1, label='Low Corr')
-# plot line
 plt.plot([0,maxqp],[0,maxqp],'r-')
 plt.grid(True)
 plt.axis('equal')
@@ -370,7 +368,7 @@ plt.ylabel('-log10(observed p)',fontsize=13)
 plt.xlabel('-log10(expected p)',fontsize=13)
 plt.legend(loc='lower right')
 plt.savefig(wdfigs+'leukemia/qq_plot_of_p_values_of_diff_genes.pdf')
-
+'''
 
 ###################################################################
 # Motif Analysis
@@ -379,8 +377,17 @@ print '\n Motif Analysis'
 
 motifFull = pd.read_csv(wddata+'motifs_on_dif_peaks.txt', sep='\t', header=0)
 
-## Find Corr and P Value
-for iline in range(len(difPeakGene)):
+clusters = pd.read_csv(wddata+'motif_clusters.tsv', header=0, sep='\t')
+motifToCluster = {}
+motifClusters = clusters['motifs'].str.upper()
+for icluster in range(111):
+	motifstmp = np.array(motifClusters[[icluster]].str.split(',',expand=True))[0]
+	for imotif in range(len(motifstmp)):
+		motifToCluster[motifstmp[imotif]] = icluster+1
+
+motifs = pd.DataFrame(columns = ['subtype','chr','geneName','igene','geneP','geneLogFC','peakName','ipeak','PeakP','peakLogFC','ABCscore','motif','cluster','iline'])
+
+for iline in range(3,len(difPeakGene)):
 	line = difPeakGene.loc[[iline]].reset_index(drop=True)
 
 	subtype = subtypeToCompact[line['subtype'][0]]
@@ -390,6 +397,7 @@ for iline in range(len(difPeakGene)):
 	peakName = line['peakName'][0]
 	ipeak = line['ipeak'][0]
 	geneP[iline] = line['geneP'][0]
+	peakPos = vars()['positionActivity'+ichr][:,ipeak]
 
 	motiftmp = motifFull[motifFull['seqnames']=='chr'+ichr]
 	motiftmp = motiftmp[motiftmp['groups']==compactToSubtype[subtype]].reset_index(drop=True)
@@ -398,71 +406,55 @@ for iline in range(len(difPeakGene)):
 	motifPeakPos[0] = motiftmp['start']
 	motifPeakPos[1] = motiftmp['end']
 
-	# create 1D array of each bp and what peak it matches
-	if not 'peakPos'+ichr in globals():
-		chrLen = int(np.amax( [np.amax(vars()['positionActivity'+ichr][1]), np.amax(motifPeakPos[1])] ))
-		vars()['peakPos'+ichr] = -9999*np.ones(shape=chrLen,dtype=int)
-		for ipeak in range( len(vars()['positionActivity'+ichr][0]) ):
-			vars()['peakPos'+ichr][ vars()['positionActivity'+ichr][0,ipeak]-500:vars()['positionActivity'+ichr][1,ipeak]+500 ] = ipeak
+	motifsAll = np.array(motiftmp['name'])
 
-	vars()['peakIndex'+str(iline)] = np.zeros(shape=(motifPeakPos.shape[1]),dtype=int)
-	for ival in range( len(vars()['peakIndex'+str(iline)]) ):
-		ipeak = np.amax( vars()['peakPos'+ichr][motifPeakPos[0,ival]:motifPeakPos[1,ival]] )
-		if ival>-1:
-			vars()['peakIndex'+str(iline)][ival] = ipeak
-		else:
-			vars()['peakIndex'+str(iline)][ival] = -9999
-	exit()
+	whereMotifs = np.where((motifPeakPos[1]>peakPos[0])==(motifPeakPos[0]<peakPos[1]))[0]
+	if len(whereMotifs)==0: continue
+	motifsThisLine = motifsAll[whereMotifs]
 
-	print(subtype+' Chromosome '+ichr+': '+str(int(100*np.round( len(vars()['peakIndex'+ichr][vars()['peakIndex'+ichr]>-1])/float(len(np.unique(motifPeakPos[0]))),2)))+' % match out of'+str(len(np.unique(motifPeakPos[0])))+' peaks')
-	vars()['difPeaks'+subtype]['convert'][vars()['difPeaks'+subtype]['chr']=='chr'+ichr] = vars()['peakIndex'+ichr]
+	motifsThisLine = pd.DataFrame(motifsThisLine,columns=['original'])
+	motifsThisLine['original'] = motifsThisLine['original'].str.replace('\(var\.2\)','_var_2_')
+	motifsThisLine = motifsThisLine['original'].str.split('.',expand=True)
+	motifsThisLine.columns = ['ID','#','motif']
+	motifsThisLine['motif'] = motifsThisLine['motif'].str.upper()
+	clusterstmp = np.zeros(shape=len(motifsThisLine),dtype=int)
+	for imotif in range(len(motifsThisLine)):
+		try:
+			clusterstmp[imotif] = motifToCluster[motifsThisLine['motif'][imotif]]
+		except:
+			clusterstmp[imotif] = -999
+	motifsThisLine = motifsThisLine.assign(cluster = clusterstmp)
+	motifsThisLine = motifsThisLine.drop(['ID','#'],axis=1)
 
-	vars()['difPeaks'+subtype].to_csv(wddata+'differential_genes/differential_peaks_'+subtypeName+'.txt', sep = '\t', header=True, index=False)
+	for imotif in range(len(motifsThisLine)):
+		dftmp = line.assign(motif=motifsThisLine['motif'][imotif]).assign(cluster=motifsThisLine['cluster'][imotif]).assign(iline=iline)
+		motifs = motifs.append( dftmp, ignore_index=True, sort=False)
 
-	exit()
 
 
-difPeaksFile = pd.read_csv(wddata+'differential_peaks.csv', sep=',', header=0)
 
-difPeaksSig = difPeaksFile[difPeaksFile['padj']<0.05]
 
-for itype in range(len(subtypes)):
-	subtype = typeNames[itype]
-	subtypeName = subtypes[itype]
-	print('\n\n\n'+'Differential Peaks: '+subtypeName)
 
-	vars()['difPeaks'+subtype] = difPeaksSig[difPeaksSig['label']==typeNamesFile[itype]].reset_index(drop=True)
 
-	vars()['difPeaks'+subtype]['chr'] = vars()['difPeaks'+subtype]['peakID'].str.split('_').str.get(0)
-	vars()['difPeaks'+subtype]['start'] = vars()['difPeaks'+subtype]['peakID'].str.split('_').str.get(1)
-	vars()['difPeaks'+subtype]['stop'] = vars()['difPeaks'+subtype]['peakID'].str.split('_').str.get(2)
-	vars()['difPeaks'+subtype]['convert'] = -9999*np.ones(shape=len(vars()['difPeaks'+subtype]))
 
-	for ichr in ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','X']:
-		vars()['positionActivity'+ichr] = np.array(np.load(wdvars+'ATAC/positionATAC'+ichr+'.npy'),dtype=int)
 
-		vars()['peakPos'+ichr] = np.zeros(shape=(2,np.sum(vars()['difPeaks'+subtype]['chr']=='chr'+ichr)), dtype=int)
-		vars()['peakPos'+ichr][0,:] = vars()['difPeaks'+subtype][vars()['difPeaks'+subtype]['chr']=='chr'+ichr]['start']
-		vars()['peakPos'+ichr][1,:] = vars()['difPeaks'+subtype][vars()['difPeaks'+subtype]['chr']=='chr'+ichr]['stop']
 
-		# create 1D array of each bp and what peak it matches
-		chrLen = int(np.amax( [np.amax(vars()['positionActivity'+ichr][1]), np.amax(vars()['peakPos'+ichr][1])] ))
-		peakPos = -9999*np.ones(shape=chrLen,dtype=int)
-		for ipeak in range( len(vars()['positionActivity'+ichr][0]) ):
-			peakPos[ vars()['positionActivity'+ichr][0,ipeak]-500:vars()['positionActivity'+ichr][1,ipeak]+500 ] = ipeak
 
-		vars()['peakIndex'+ichr] = np.zeros(shape=(vars()['peakPos'+ichr].shape[1]),dtype=int)
-		for ival in range( len(vars()['peakIndex'+ichr]) ):
-			ipeak = np.amax( peakPos[vars()['peakPos'+ichr][0,ival]:vars()['peakPos'+ichr][1,ival]] )
-			if ival>-1:
-				vars()['peakIndex'+ichr][ival] = ipeak
-			else:
-				vars()['peakIndex'+ichr][ival] = -9999
 
-		print(subtype+' Chromosome '+ichr+': '+str(int(100*np.round( len(vars()['peakIndex'+ichr][vars()['peakIndex'+ichr]>-1])/float(len(np.unique(vars()['peakPos'+ichr][0]))),2)))+' % match out of'+str(len(np.unique(vars()['peakPos'+ichr][0])))+' peaks')
-		vars()['difPeaks'+subtype]['convert'][vars()['difPeaks'+subtype]['chr']=='chr'+ichr] = vars()['peakIndex'+ichr]
 
-	vars()['difPeaks'+subtype].to_csv(wddata+'differential_genes/differential_peaks_'+subtypeName+'.txt', sep = '\t', header=True, index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
