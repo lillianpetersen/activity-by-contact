@@ -137,14 +137,19 @@ for itype in range(len(subtypes)):
 			vars()['abc'+subtype+ichr] = np.load( wdvars+'ABC/abc'+subtype+ichr+'.npy')
 
 ###################################################################
-# Differential Genes
+# Differential Genes and Peaks
 ###################################################################
 for itype in range(len(subtypes)):
 	subtype = typeNames[itype]
 	subtypeName = subtypes[itype]
 	print('Differential Genes: '+subtypeName)
 
-	vars()['difGenes'+subtype] = pd.read_csv(wddata+'differential_genes/'+subtypeName+'_significant_genes.txt', sep = '\t', header=0)
+	vars()['allRgenes'+subtype] = pd.read_csv(wddata+'differential_genes/'+subtypeName+'_differential_genes.txt', sep = '\t', header = 0)[:-1]
+	p = vars()['allRgenes'+subtype]['p']
+	pMask = p<0.05
+
+	vars()['difGenes'+subtype] = vars()['allRgenes'+subtype][pMask].reset_index(drop=True)
+
 	vars()['difGenes'+subtype]['geneID']=vars()['difGenes'+subtype]['genes']
 	del vars()['difGenes'+subtype]['genes']
 	vars()['difGenes'+subtype]['geneName'] = np.zeros( shape=len(vars()['difGenes'+subtype]), dtype=object)
@@ -304,7 +309,7 @@ for iline in range(len(difPeakGene)):
 	#exit()
 
 	if MakePlots:
-		corrPrint[iline] = np.round(corr[iline],2)
+		corrPrint = np.round(corr[iline],2)
 
 		## Plot
 		plt.clf()
@@ -318,21 +323,20 @@ for iline in range(len(difPeakGene)):
 		ax.set_ylabel('Gene Expression')
 	
 		if cancerGene[iline]:
-			plt.title(geneName + ' (Leukemia Oncogene) with Peak '+peakName+'\n Corr = '+str(corrPrint[iline])+', P = '+np.format_float_scientific(p[iline],precision=2),fontsize=18)
+			plt.title(geneName + ' (Leukemia Oncogene) with Peak '+peakName+'\n Corr = '+str(corrPrint)+', P = '+np.format_float_scientific(p[iline],precision=2),fontsize=18)
 		elif HasCategory:
-			plt.title(geneName + ' ('+geneCategory[iline]+') with Peak '+peakName+'\n Corr = '+str(corrPrint[iline])+', P = '+np.format_float_scientific(p[iline],precision=2),fontsize=18)
+			plt.title(geneName + ' ('+geneCategory[iline]+') with Peak '+peakName+'\n Corr = '+str(corrPrint)+', P = '+np.format_float_scientific(p[iline],precision=2),fontsize=18)
 		else:
-			plt.title(geneName + ' with Peak '+peakName+'\n Corr = '+str(corrPrint[iline])+', P = '+np.format_float_scientific(p[iline],precision=2),fontsize=18)
+			plt.title(geneName + ' with Peak '+peakName+'\n Corr = '+str(corrPrint)+', P = '+np.format_float_scientific(p[iline],precision=2),fontsize=18)
 	
 		if cancerGene[iline]:
-			plt.savefig(wdfigs+'leukemia/differential_peakgenes/cancer_genes/'+subtype+'_'+str(corrPrint[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+			plt.savefig(wdfigs+'leukemia/differential_peakgenes/cancer_genes/'+subtype+'_'+str(corrPrint)+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
 		elif HasCategory and p[iline]<0.05:
-			plt.savefig(wdfigs+'leukemia/differential_peakgenes/gene_categories/'+subtype+'_'+str(corrPrint[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+			plt.savefig(wdfigs+'leukemia/differential_peakgenes/gene_categories/'+subtype+'_'+str(corrPrint)+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
 		elif p[iline]<0.05:
-			plt.savefig(wdfigs+'leukemia/differential_peakgenes/no_cancer_high_p/'+subtype+'_'+str(corrPrint[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
+			plt.savefig(wdfigs+'leukemia/differential_peakgenes/no_cancer_high_p/'+subtype+'_'+str(corrPrint)+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
 		else:
-			plt.savefig(wdfigs+'leukemia/differential_peakgenes/other/'+subtype+'_'+str(corrPrint[iline])+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
-
+			plt.savefig(wdfigs+'leukemia/differential_peakgenes/other/'+subtype+'_'+str(corrPrint)+'_'+vars()['geneName'+ichr][igene]+'_peak_'+peakName+'.pdf')
 
 
 ###### Make a QQ Plot ######
@@ -387,7 +391,7 @@ for icluster in range(111):
 
 motifs = pd.DataFrame(columns = ['subtype','chr','geneName','igene','geneP','geneLogFC','peakName','ipeak','PeakP','peakLogFC','ABCscore','motif','cluster','iline'])
 
-for iline in range(3,len(difPeakGene)):
+for iline in range(len(difPeakGene)):
 	line = difPeakGene.loc[[iline]].reset_index(drop=True)
 
 	subtype = subtypeToCompact[line['subtype'][0]]
@@ -409,7 +413,9 @@ for iline in range(3,len(difPeakGene)):
 	motifsAll = np.array(motiftmp['name'])
 
 	whereMotifs = np.where((motifPeakPos[1]>peakPos[0])==(motifPeakPos[0]<peakPos[1]))[0]
-	if len(whereMotifs)==0: continue
+	if len(whereMotifs)==0: 
+		print subtype,'\t', geneName,'\t', peakName
+		continue
 	motifsThisLine = motifsAll[whereMotifs]
 
 	motifsThisLine = pd.DataFrame(motifsThisLine,columns=['original'])
@@ -429,6 +435,58 @@ for iline in range(3,len(difPeakGene)):
 	for imotif in range(len(motifsThisLine)):
 		dftmp = line.assign(motif=motifsThisLine['motif'][imotif]).assign(cluster=motifsThisLine['cluster'][imotif]).assign(iline=iline)
 		motifs = motifs.append( dftmp, ignore_index=True, sort=False)
+
+for itype in range(len(subtypes)):
+	subtype = typeNames[itype]
+	subtypeName = subtypes[itype]
+
+	vars()['peaksWithCluster'+subtype] = np.zeros(shape=111)
+	for icluster in range(1,112):
+		motifstmp = motifs[motifs['subtype']==subtypeName].reset_index(drop=True)
+		whereCluster = np.where(motifstmp['cluster']==icluster)[0]
+		#if len(whereCluster)>1 or len(whereCluster)==0:
+		uniquePeaksCluster = np.unique(motifstmp['peakName'][whereCluster])
+		#else:
+		#	uniquePeaksCluster = np.unique(motifstmp['peakName'][whereCluster[0]])
+		vars()['peaksWithCluster'+subtype][icluster-1] = len(uniquePeaksCluster)
+	
+peaksWithClusterDUX = peaksWithClusterDUX/np.sum(peaksWithClusterDUX)
+peaksWithClusterETVRUNX = peaksWithClusterETVRUNX/np.sum(peaksWithClusterETVRUNX)
+peaksWithClusterHyperdiploid = peaksWithClusterHyperdiploid/np.sum(peaksWithClusterHyperdiploid)
+
+peaksWithClusterDUX = peaksWithClusterDUX[:102]
+peaksWithClusterETVRUNX = peaksWithClusterETVRUNX[:102]
+peaksWithClusterHyperdiploid = peaksWithClusterHyperdiploid[:102]
+
+clusterNames = np.array(range(1,103),dtype=object)
+
+clustersAll = np.array(np.sum([peaksWithClusterDUX,peaksWithClusterETVRUNX,peaksWithClusterHyperdiploid],axis=0),dtype=bool)
+
+x = np.array(range(len(clusterNames)))
+
+plt.clf()
+fig, axs = plt.subplots(3, 1, sharex=True, sharey=False)
+
+axs[0].bar(x, peaksWithClusterETVRUNX, color='cyan', alpha=0.9, label='ETV6-RUNX1')
+axs[0].grid(True)
+axs[0].set_ylim([0,0.09])
+axs[0].legend(loc='upper right',fontsize=12)
+
+axs[1].bar(x, peaksWithClusterDUX, color='lawngreen', alpha=0.8, label='DUX4')
+axs[1].set_ylabel('Frequency')
+axs[1].grid(True)
+axs[1].set_ylim([0,0.09])
+axs[1].legend(loc='upper right',fontsize=12)
+
+axs[2].bar(x, peaksWithClusterHyperdiploid, color='orange', alpha=0.8, label='Hyperdiploid')
+axs[2].set_ylim([0,0.09])
+plt.xlabel('Cluster Category')
+plt.xlim([0,102])
+plt.grid(True)
+plt.legend(loc='upper right',fontsize=12)
+fig.suptitle('Motifs Present in Differential Peaks with \n High ABC Scores to Differential Genes',fontsize=17)
+plt.savefig(wdfigs+'leukemia/motif_barchart.pdf')
+plt.show()
 
 
 

@@ -41,13 +41,18 @@ for (igroup in seq(length(typeList))){
 	nSamples = 24
 	
 	rawdata = read.delim( paste(gene_file,"raw_gene_counts_B_ALL.txt",sep=""),header=FALSE) # edit input file name
+	if (typeString[igroup]=='PAX5alt'){
+		rawdata = subset(rawdata, select = -c(V2))
+		groupArray = c(0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+		nSamples = 23
+		}
 	
 	y = DGEList(counts=rawdata[,2:(nSamples+1)],genes=rawdata[,1],group=groupArray)
-	keep = rowSums(y$counts>0.1)>=(nSamples) #all the samples have rpkm>0.1
+	keep = rowSums(y$counts>0.1)>=(nSamples/2) #half the samples have rpkm>0.1
 	y = y[keep,] # keep only high enough genes
 	y = DGEList(counts=y$counts,genes=y$genes)
 	
-	group = factor(typeList[[igroup]]) # outgroup one subtype
+	group = factor(groupArray) # outgroup one subtype
 	design = model.matrix(~group)
 	
 	# estimate dispersion

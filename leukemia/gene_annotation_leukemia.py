@@ -101,7 +101,6 @@ def _get_value(value):
     return value
 
 df = dataframe(wddata+'gencode.v25.annotation.gtf')
-exit()
 
 ## Select only genes (not trascripts, rnastuff, ect)
 geneMask = df['feature']=='gene'

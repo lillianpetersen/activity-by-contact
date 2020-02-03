@@ -70,7 +70,7 @@ pickle.dump(genePosAllDict, open(wdvars+'genePosAllDict.p','wb'))
 # all Samples have expressions > 0.1
 keepRNAall = expressionFull>0.1
 keepRNAsum = np.sum(keepRNAall,axis=0)
-keepRNA = 1-(keepRNAsum>=nSamples*.75)
+keepRNA = 1-(keepRNAsum>=nSamples*.25)
 # length is > 200bp
 keepLength = lengthRNA>200
 keepLength = 1-keepLength
